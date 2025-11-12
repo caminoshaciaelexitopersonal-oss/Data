@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # El volumen permite que el contenedor se actualice automáticamente
+    # cuando cambiamos el código en nuestro editor (ideal para desarrollo)
+    volumes:
+      - ./backend:/app
+    environment:
+      # Aquí es donde configuraríamos las variables de entorno, como las claves de API
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80" # Mapeamos el puerto 80 del contenedor al 8080 de nuestra máquina
+    # Añadimos una dependencia para asegurar que el backend se inicie primero
+    depends_on:
+      - backend
+
+networks:
+  default:
+    driver: bridge
