@@ -1,0 +1,5 @@
+{
+  "name": " Análisis Data Unibague, final",
+  "description": "An interactive web application to perform K-Means clustering on uploaded datasets. Visualize clusters, configure parameters, and get AI-powered analysis of the results using the Gemini API.",
+  "requestFramePermissions": []
+}
