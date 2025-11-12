@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pandas
+scikit-learn
+python-multipart
+openpyxl
+sqlalchemy
+psycopg2-binary
+langchain
+google-generativeai
+langchain-google-genai
+langchain-community
+matplotlib
+seaborn
+celery
+redis
+prometheus-fastapi-instrumentator
