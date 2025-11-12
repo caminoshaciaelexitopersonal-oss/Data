@@ -23,6 +23,9 @@ docker-compose.override.yml
 
 # Archivos de entorno
 .env
+
+*.env.*
+
 *.env.local
 
 # Archivos de sistema operativo

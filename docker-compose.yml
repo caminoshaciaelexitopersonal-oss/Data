@@ -7,24 +7,66 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    # El volumen permite que el contenedor se actualice automáticamente
-    # cuando cambiamos el código en nuestro editor (ideal para desarrollo)
+ 
     volumes:
       - ./backend:/app
     environment:
-      # Aquí es donde configuraríamos las variables de entorno, como las claves de API
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      - redis
+ 
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80" # Mapeamos el puerto 80 del contenedor al 8080 de nuestra máquina
-    # Añadimos una dependencia para asegurar que el backend se inicie primero
+ 
+      - "8080:80"
     depends_on:
       - backend
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A celery_worker.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      - redis
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
 
 networks:
   default:
     driver: bridge
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+ 

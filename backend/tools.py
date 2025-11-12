@@ -2,8 +2,11 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
+ 
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
+from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+ 
 from typing import List, Dict, Any
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -69,3 +72,51 @@ def run_linear_regression_tool(data: List[Dict[str, Any]], target: str, feature:
         return { "rSquared": r2, "mse": mse, "targetVariable": target, "featureVariables": [feature], "line_points": {"x": line_x, "y": line_y} }
     except Exception as e:
         return {"error": f"Error en la regresión lineal: {e}"}
+ 
+
+def run_naive_bayes_tool(data: List[Dict[str, Any]], target: str, features: List[str]) -> Dict[str, Any]:
+    """
+    Realiza un análisis de clasificación usando el algoritmo Naive Bayes Gaussiano.
+    Es útil para predecir una categoría basada en un conjunto de características numéricas.
+
+    :param data: Lista de diccionarios representando los datos.
+    :param target: El nombre de la columna categórica a predecir.
+    :param features: La lista de columnas numéricas a usar para la predicción.
+    :return: Un diccionario con las métricas del modelo (accuracy, reporte de clasificación).
+    """
+    try:
+        df = pd.DataFrame(data)
+        if df.empty: return {"error": "Los datos están vacíos."}
+        if target not in df.columns or not all(f in df.columns for f in features):
+            return {"error": "Una o más de las variables especificadas no se encuentran en los datos."}
+
+        # Preparar datos
+        le = LabelEncoder()
+        df[target] = le.fit_transform(df[target])
+
+        X = df[features].values
+        y = df[target].values
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+        # Entrenar modelo
+        model = GaussianNB()
+        model.fit(X_train, y_train)
+
+        # Hacer predicciones
+        y_pred = model.predict(X_test)
+
+        # Calcular métricas
+        accuracy = accuracy_score(y_test, y_pred)
+        report = classification_report(y_test, y_pred, target_names=le.classes_.tolist(), output_dict=True)
+
+        return {
+            "accuracy": accuracy,
+            "classification_report": report,
+            "targetVariable": target,
+            "featureVariables": features,
+            "algorithm": "Naive Bayes"
+        }
+    except Exception as e:
+        return {"error": f"Error en el análisis de Naive Bayes: {e}"}
+ 

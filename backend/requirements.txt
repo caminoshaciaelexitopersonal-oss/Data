@@ -8,11 +8,12 @@ sqlalchemy
 psycopg2-binary
 langchain
 google-generativeai
-ollama
-langchain-community
+ 
 langchain-google-genai
-tensorflow
+langchain-community
 matplotlib
 seaborn
-SpeechRecognition
-pydub
+celery
+redis
+prometheus-fastapi-instrumentator
+ 
