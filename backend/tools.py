@@ -2,9 +2,11 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+ 
 from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
 from sklearn.naive_bayes import GaussianNB
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+ 
 from typing import List, Dict, Any
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -70,6 +72,7 @@ def run_linear_regression_tool(data: List[Dict[str, Any]], target: str, feature:
         return { "rSquared": r2, "mse": mse, "targetVariable": target, "featureVariables": [feature], "line_points": {"x": line_x, "y": line_y} }
     except Exception as e:
         return {"error": f"Error en la regresión lineal: {e}"}
+ 
 
 def run_naive_bayes_tool(data: List[Dict[str, Any]], target: str, features: List[str]) -> Dict[str, Any]:
     """
@@ -116,3 +119,4 @@ def run_naive_bayes_tool(data: List[Dict[str, Any]], target: str, features: List
         }
     except Exception as e:
         return {"error": f"Error en el análisis de Naive Bayes: {e}"}
+ 

@@ -7,18 +7,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+ 
     volumes:
       - ./backend:/app
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     depends_on:
       - redis
+ 
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
+ 
       - "8080:80"
     depends_on:
       - backend
@@ -66,3 +69,4 @@ networks:
 volumes:
   prometheus_data: {}
   grafana_data: {}
+ 

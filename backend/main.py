@@ -2,14 +2,17 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
+ 
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
 from sqlalchemy import create_engine, text
+ 
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
+ 
 from langchain import hub
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -53,11 +56,13 @@ agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 Instrumentator().instrument(app).expose(app)
+ 
 
 class ChatRequest(BaseModel):
     message: str
     data: List[Dict[str, Any]]
 
+ 
 class DbConnectionRequest(BaseModel):
     db_uri: str
     query: str
@@ -73,6 +78,7 @@ async def load_from_db(request: DbConnectionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar la base de datos: {e}")
 
+ 
 @app.post("/upload-data/")
 async def upload_data(file: UploadFile = File(...)):
     filename = file.filename
@@ -82,13 +88,17 @@ async def upload_data(file: UploadFile = File(...)):
         if extension in ['csv', 'txt']:
             df = pd.read_csv(io.StringIO(content.decode('utf-8')))
         elif extension in ['xlsx', 'xls']:
+ 
             df_dict = pd.read_excel(io.BytesIO(content), sheet_name=None)
             sheet_names = list(df_dict.keys())
             df = df_dict[sheet_names[0]]
+ 
         elif extension == 'json':
             df = pd.read_json(io.StringIO(content.decode('utf-8')))
         else:
             raise HTTPException(status_code=400, detail=f"Tipo de archivo no soportado: .{extension}")
+ 
+ 
         df = df.where(pd.notna(df), None)
         return {"filename": filename, "data": df.to_dict(orient='records')}
     except Exception as e:
@@ -98,13 +108,17 @@ async def upload_data(file: UploadFile = File(...)):
 async def chat_agent_handler(request: ChatRequest):
     try:
         df = pd.DataFrame(request.data)
+ 
         data_preview = df.head().to_string() if not df.empty else "No hay datos cargados."
+ main
         response = await agent_executor.ainvoke({
             "input": request.message,
             "data_preview": data_preview,
             "data": request.data,
+ 
             "chat_history": []
         })
+ 
         return {"output": response.get("output")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el agente de IA: {e}")
