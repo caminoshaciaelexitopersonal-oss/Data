@@ -1,43 +1,22 @@
 // services/dataService.ts
 
-import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { DataPoint, OutlierReport, Transformation } from '../types';
 
 // --- DATA LOADING ---
 
-export const loadDataFromFile = async (file: File): Promise<{ data: DataPoint[], fileName: string, sheetNames?: string[] }> => {
+export const loadDataFromFile = async (file: File): Promise<{ data: DataPoint[], fileName: string }> => {
     const fileName = file.name;
     const extension = fileName.split('.').pop()?.toLowerCase();
 
     if (extension === 'csv' || extension === 'txt') {
-        const data = await parseCsv(file);
-        return { data, fileName };
+        return { data: await parseCsv(file), fileName };
     }
     if (extension === 'json') {
-        const data = await parseJson(file);
-        return { data, fileName };
+        return { data: await parseJson(file), fileName };
     }
-    if (extension === 'xlsx' || extension === 'xls') {
-        const { sheetNames, firstSheetData } = await parseExcel(file);
-        if (sheetNames.length > 1) {
-            return { data: [], fileName, sheetNames };
-        }
-        return { data: firstSheetData, fileName };
-    }
-    throw new Error(`Unsupported file type: .${extension}`);
+    throw new Error(`Unsupported file type for client-side parsing: .${extension}. Excel files should be handled by the backend.`);
 };
-
-export const loadSheetFromExcel = async (file: File, sheetName: string): Promise<DataPoint[]> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
-    const worksheet = workbook.Sheets[sheetName];
-    if (!worksheet) {
-        throw new Error(`Sheet "${sheetName}" not found in the Excel file.`);
-    }
-    return XLSX.utils.sheet_to_json<DataPoint>(worksheet);
-};
-
 
 const parseCsv = (file: File): Promise<DataPoint[]> => {
     return new Promise((resolve, reject) => {
