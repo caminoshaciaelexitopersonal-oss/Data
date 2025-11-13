@@ -9,7 +9,7 @@ const useSpeechRecognition = (onResult: (text: string) => void) => {
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            console.warn("Speech recognition not supported in this browser.");
+            console.warn("El reconocimiento de voz no es compatible con este navegador.");
             return;
         }
         const recognition = new SpeechRecognition();
@@ -23,7 +23,7 @@ const useSpeechRecognition = (onResult: (text: string) => void) => {
             setIsListening(false);
         };
         recognition.onerror = (event: any) => {
-            console.error("Speech recognition error", event.error);
+            console.error("Error en el reconocimiento de voz:", event.error);
             setIsListening(false);
         };
         recognition.onend = () => {
@@ -88,7 +88,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
             if (typeof agentResponse.output === 'object' && agentResponse.output.image_base64) {
                 botResponse = {
                     sender: 'bot',
-                    text: agentResponse.output.description || "Aquí está la visualización que pediste.",
+                    text: agentResponse.output.description || "Aquí tienes la visualización que has solicitado.",
                     imageBase64: agentResponse.output.image_base64
                 };
             } else {
@@ -98,7 +98,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
 
         } catch (error) {
             const err = error as Error;
-            const errorMessage: Message = { sender: 'bot', text: `Lo siento, hubo un error: ${err.message}` };
+            const errorMessage: Message = { sender: 'bot', text: `Lo siento, ha ocurrido un error: ${err.message}` };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
@@ -114,7 +114,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
                         <div className={`px-4 py-2 rounded-lg max-w-lg ${msg.sender === 'user' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-slate-200'}`}>
                             <p className="text-sm" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br />') }} />
                             {msg.imageBase64 && (
-                                <img src={`data:image/png;base64,${msg.imageBase64}`} alt="Generated chart" className="mt-2 rounded-lg"/>
+                                <img src={`data:image/png;base64,${msg.imageBase64}`} alt="Gráfico generado" className="mt-2 rounded-lg"/>
                             )}
                         </div>
                         {msg.sender === 'user' && <div className="bg-gray-700 p-2 rounded-full"><UserIcon className="w-6 h-6 text-slate-300" /></div>}
@@ -141,7 +141,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-                        placeholder="Escribe o usa el micrófono..."
+                        placeholder="Escribe tu mensaje o usa el micrófono..."
                         className="flex-1 bg-transparent text-white focus:outline-none px-2"
                         disabled={isLoading}
                     />

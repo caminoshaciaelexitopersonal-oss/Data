@@ -7,21 +7,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
- 
     volumes:
       - ./backend:/app
+      - mlflow_data:/mlflow # Montar volumen de mlflow
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
       - redis
- 
+      - mlflow
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
- 
       - "8080:80"
     depends_on:
       - backend
@@ -40,8 +40,22 @@ services:
       - ./backend:/app
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     depends_on:
       - redis
+      - mlflow
+
+  mlflow:
+    image: python:3.11-slim
+    command: >
+      sh -c "pip install mlflow psycopg2-binary &&
+             mlflow server --host 0.0.0.0 --port 5000
+             --backend-store-uri sqlite:////mlflow/mlflow.db
+             --default-artifact-root file:/mlflow/artifacts"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
 
   prometheus:
     image: prom/prometheus
@@ -69,4 +83,4 @@ networks:
 volumes:
   prometheus_data: {}
   grafana_data: {}
- 
+  mlflow_data: {} # Nuevo volumen para mlflow
