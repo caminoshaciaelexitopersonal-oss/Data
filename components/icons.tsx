@@ -48,3 +48,15 @@ export const DatabaseIcon: React.FC<{ className?: string }> = ({ className }) =>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7s0 4 8 4 8-4 8-4" />
     </svg>
 );
+
+export const MongoDbIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.9A6.995 6.995 0 0 1 11 3.1c1.24.1 2.38.5 3.35 1.12.33.22.42.66.2 1-.22.33-.66.42-1 .2-.8-.5-1.73-.82-2.75-.82-2.12 0-3.85 1.73-3.85 3.85S8.88 12.3 11 12.3c.96 0 1.83-.35 2.53-.94.28-.23.71-.16 1 .11.33.28.36.75.08 1.06-.9 1-2.17 1.57-3.61 1.57z" />
+    </svg>
+);
+
+export const AwsS3Icon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+    </svg>
+);

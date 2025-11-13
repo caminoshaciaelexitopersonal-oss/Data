@@ -1,22 +1,42 @@
 import React, { useState } from 'react';
-import { UploadIcon, DatabaseIcon, XIcon } from './icons';
+import { UploadIcon, DatabaseIcon, XIcon, MongoDbIcon, AwsS3Icon } from './icons';
 
 interface DataSourceModalProps {
     onFileLoad: (file: File) => void;
+    onExcelFileLoad: (file: File) => void;
     onDbConnect: (uri: string, query: string) => void;
+    onMongoDbConnect: (uri: string, db: string, collection: string) => void;
+    onS3Connect: (bucket: string, key: string) => void;
     onClose: () => void;
 }
 
-export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, onDbConnect, onClose }) => {
-    const [sourceType, setSourceType] = useState<'file' | 'db' | null>(null);
+export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, onExcelFileLoad, onDbConnect, onMongoDbConnect, onS3Connect, onClose }) => {
+    const [sourceType, setSourceType] = useState<'file' | 'db' | 'mongodb' | 's3' | null>(null);
+
+    // SQL DB State
     const [dbUri, setDbUri] = useState('');
     const [dbQuery, setDbQuery] = useState('SELECT * FROM your_table LIMIT 100;');
+
+    // MongoDB State
+    const [mongoUri, setMongoUri] = useState('');
+    const [mongoDbName, setMongoDbName] = useState('');
+    const [mongoCollection, setMongoCollection] = useState('');
+
+    // S3 State
+    const [s3Bucket, setS3Bucket] = useState('');
+    const [s3Key, setS3Key] = useState('');
+
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            onFileLoad(file);
+            const extension = file.name.split('.').pop()?.toLowerCase();
+            if (extension === 'xlsx' || extension === 'xls') {
+                onExcelFileLoad(file);
+            } else {
+                onFileLoad(file);
+            }
             onClose();
         }
     };
@@ -26,6 +46,74 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
             onDbConnect(dbUri, dbQuery);
             onClose();
         }
+    };
+
+    const handleMongoDbSubmit = () => {
+        if (mongoUri && mongoDbName && mongoCollection) {
+            onMongoDbConnect(mongoUri, mongoDbName, mongoCollection);
+            onClose();
+        }
+    };
+
+    const handleS3Submit = () => {
+        if (s3Bucket && s3Key) {
+            onS3Connect(s3Bucket, s3Key);
+            onClose();
+        }
+    };
+
+    const renderForm = () => {
+        if (sourceType === 'db') {
+            return (
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">URI de Conexión (SQLAlchemy)</label>
+                        <input type="text" value={dbUri} onChange={(e) => setDbUri(e.target.value)} placeholder="postgresql://user:pass@host/db" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">Consulta SQL</label>
+                        <textarea value={dbQuery} onChange={(e) => setDbQuery(e.target.value)} rows={4} className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm font-mono" />
+                    </div>
+                    <button onClick={handleDbSubmit} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded">Conectar y Cargar Datos</button>
+                </div>
+            );
+        }
+        if (sourceType === 'mongodb') {
+            return (
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">URI de Conexión de MongoDB</label>
+                        <input type="text" value={mongoUri} onChange={(e) => setMongoUri(e.target.value)} placeholder="mongodb://user:pass@host:port/" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">Nombre de la Base de Datos</label>
+                        <input type="text" value={mongoDbName} onChange={(e) => setMongoDbName(e.target.value)} placeholder="my_database" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">Nombre de la Colección</label>
+                        <input type="text" value={mongoCollection} onChange={(e) => setMongoCollection(e.target.value)} placeholder="my_collection" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <button onClick={handleMongoDbSubmit} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Conectar y Cargar Datos</button>
+                </div>
+            );
+        }
+        if (sourceType === 's3') {
+            return (
+                <div className="space-y-4">
+                    <p className="text-xs text-slate-400">Asegúrate de que las credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) están configuradas en tu entorno de backend.</p>
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">Nombre del Bucket de S3</label>
+                        <input type="text" value={s3Bucket} onChange={(e) => setS3Bucket(e.target.value)} placeholder="my-s3-bucket" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <div>
+                        <label className="text-sm text-slate-300 block mb-1">Clave del Objeto (Ruta del archivo)</label>
+                        <input type="text" value={s3Key} onChange={(e) => setS3Key(e.target.value)} placeholder="path/to/my/file.csv" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                    </div>
+                    <button onClick={handleS3Submit} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded">Conectar y Cargar Datos</button>
+                </div>
+            );
+        }
+        return null;
     };
 
     return (
@@ -39,47 +127,36 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
                 </div>
 
                 {!sourceType ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center p-8 bg-gray-700/50 hover:bg-cyan-500/20 rounded-lg transition-colors border border-gray-600 hover:border-cyan-500">
-                            <UploadIcon className="w-12 h-12 mb-3 text-cyan-400" />
-                            <span className="text-lg font-semibold text-white">Cargar Archivo</span>
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                        <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-cyan-500/20 rounded-lg transition-colors border border-gray-600 hover:border-cyan-500">
+                            <UploadIcon className="w-10 h-10 mb-2 text-cyan-400" />
+                            <span className="text-md font-semibold text-white">Cargar Archivo</span>
                             <span className="text-xs text-slate-400">CSV, Excel, JSON</span>
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-                        <button onClick={() => setSourceType('db')} className="flex flex-col items-center justify-center p-8 bg-gray-700/50 hover:bg-purple-500/20 rounded-lg transition-colors border border-gray-600 hover:border-purple-500">
-                            <DatabaseIcon className="w-12 h-12 mb-3 text-purple-400" />
-                            <span className="text-lg font-semibold text-white">Base de Datos</span>
-                            <span className="text-xs text-slate-400">PostgreSQL, MySQL, etc.</span>
+                        <button onClick={() => setSourceType('db')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-purple-500/20 rounded-lg transition-colors border border-gray-600 hover:border-purple-500">
+                            <DatabaseIcon className="w-10 h-10 mb-2 text-purple-400" />
+                            <span className="text-md font-semibold text-white">Base de Datos SQL</span>
+                            <span className="text-xs text-slate-400">PostgreSQL, etc.</span>
+                        </button>
+
+                        <button onClick={() => setSourceType('mongodb')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-green-500/20 rounded-lg transition-colors border border-gray-600 hover:border-green-500">
+                            <MongoDbIcon className="w-10 h-10 mb-2 text-green-400" />
+                            <span className="text-md font-semibold text-white">MongoDB</span>
+                            <span className="text-xs text-slate-400">Conectar a una colección</span>
+                        </button>
+
+                        <button onClick={() => setSourceType('s3')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-orange-500/20 rounded-lg transition-colors border border-gray-600 hover:border-orange-500">
+                            <AwsS3Icon className="w-10 h-10 mb-2 text-orange-400" />
+                            <span className="text-md font-semibold text-white">Amazon S3</span>
+                            <span className="text-xs text-slate-400">Cargar desde un bucket</span>
                         </button>
                     </div>
                 ) : (
                     <div>
                         <button onClick={() => setSourceType(null)} className="text-sm text-cyan-400 mb-4 hover:underline">← Volver</button>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm text-slate-300 block mb-1">URI de Conexión (SQLAlchemy)</label>
-                                <input
-                                    type="text"
-                                    value={dbUri}
-                                    onChange={(e) => setDbUri(e.target.value)}
-                                    placeholder="postgresql://user:pass@host/db"
-                                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm text-slate-300 block mb-1">Consulta SQL</label>
-                                <textarea
-                                    value={dbQuery}
-                                    onChange={(e) => setDbQuery(e.target.value)}
-                                    rows={4}
-                                    className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm font-mono"
-                                />
-                            </div>
-                            <button onClick={handleDbSubmit} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded">
-                                Conectar y Cargar Datos
-                            </button>
-                        </div>
+                        {renderForm()}
                     </div>
                 )}
             </div>
