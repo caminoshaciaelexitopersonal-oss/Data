@@ -9,12 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
     "@google/genai": "^1.29.0",
-    "recharts": "^3.3.0",
-    "react": "^19.2.0",
+    "framer-motion": "^12.23.24",
+    "marked": "^17.0.0",
     "papaparse": "^5.5.3",
-    "marked": "^17.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

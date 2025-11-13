@@ -15,7 +15,7 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
 
     // SQL DB State
     const [dbUri, setDbUri] = useState('');
-    const [dbQuery, setDbQuery] = useState('SELECT * FROM your_table LIMIT 100;');
+    const [dbQuery, setDbQuery] = useState('SELECT * FROM tu_tabla LIMIT 100;');
 
     // MongoDB State
     const [mongoUri, setMongoUri] = useState('');
@@ -68,7 +68,7 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">URI de Conexión (SQLAlchemy)</label>
-                        <input type="text" value={dbUri} onChange={(e) => setDbUri(e.target.value)} placeholder="postgresql://user:pass@host/db" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={dbUri} onChange={(e) => setDbUri(e.target.value)} placeholder="postgresql://usuario:pass@host/db" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">Consulta SQL</label>
@@ -83,15 +83,15 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
                 <div className="space-y-4">
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">URI de Conexión de MongoDB</label>
-                        <input type="text" value={mongoUri} onChange={(e) => setMongoUri(e.target.value)} placeholder="mongodb://user:pass@host:port/" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={mongoUri} onChange={(e) => setMongoUri(e.target.value)} placeholder="mongodb://usuario:pass@host:port/" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">Nombre de la Base de Datos</label>
-                        <input type="text" value={mongoDbName} onChange={(e) => setMongoDbName(e.target.value)} placeholder="my_database" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={mongoDbName} onChange={(e) => setMongoDbName(e.target.value)} placeholder="mi_base_de_datos" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">Nombre de la Colección</label>
-                        <input type="text" value={mongoCollection} onChange={(e) => setMongoCollection(e.target.value)} placeholder="my_collection" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={mongoCollection} onChange={(e) => setMongoCollection(e.target.value)} placeholder="mi_coleccion" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <button onClick={handleMongoDbSubmit} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">Conectar y Cargar Datos</button>
                 </div>
@@ -100,14 +100,14 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
         if (sourceType === 's3') {
             return (
                 <div className="space-y-4">
-                    <p className="text-xs text-slate-400">Asegúrate de que las credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) están configuradas en tu entorno de backend.</p>
+                    <p className="text-xs text-slate-400">Asegúrate de que las credenciales de AWS (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) están configuradas en el entorno del backend.</p>
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">Nombre del Bucket de S3</label>
-                        <input type="text" value={s3Bucket} onChange={(e) => setS3Bucket(e.target.value)} placeholder="my-s3-bucket" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={s3Bucket} onChange={(e) => setS3Bucket(e.target.value)} placeholder="mi-bucket-s3" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <div>
                         <label className="text-sm text-slate-300 block mb-1">Clave del Objeto (Ruta del archivo)</label>
-                        <input type="text" value={s3Key} onChange={(e) => setS3Key(e.target.value)} placeholder="path/to/my/file.csv" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
+                        <input type="text" value={s3Key} onChange={(e) => setS3Key(e.target.value)} placeholder="ruta/a/mi/archivo.csv" className="w-full bg-gray-900 border border-gray-600 rounded p-2 text-sm" />
                     </div>
                     <button onClick={handleS3Submit} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded">Conectar y Cargar Datos</button>
                 </div>
