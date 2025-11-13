@@ -3,7 +3,9 @@ from fastapi.responses import FileResponse
 import pandas as pd
 import io
 import mlflow
+ 
 import os
+ 
  
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -28,9 +30,11 @@ from logger import log_step, get_logged_steps, clear_log
 # --- Visualizations ---
 from visualizations import add_visualization, get_all_visualizations, clear_visualizations
 
+ 
 # --- Report Generator ---
 from report_generator import generate_report, set_summary, clear_report_artifacts
 
+ 
 from celery_worker import (
     run_kmeans_task,
     generate_correlation_heatmap_task,
@@ -38,13 +42,17 @@ from celery_worker import (
     run_naive_bayes_task,
     train_random_forest_classifier_task,
     run_etl_pipeline_task,
+ 
     fetch_api_data_task
+ 
 )
 
 # --- Configuración de MLflow ---
 mlflow.set_tracking_uri("http://mlflow:5000")
 
+ 
 # (Todas las herramientas se mantienen igual)
+ 
 @tool
 def fetch_api_data(url: str) -> Dict[str, Any]:
     """
@@ -118,6 +126,7 @@ with mlflow.start_run():
 
     return result
 
+ 
 @tool
 def run_kmeans_analysis(data: List[Dict[str, Any]], k: int, features: List[str]) -> Dict[str, Any]:
     """Runs K-Means clustering analysis on the provided data."""
@@ -219,6 +228,7 @@ model.fit(X, y)
     log_step(f"Ejecutando clasificación Naive Bayes: target='{target}', features={features}", code)
     task = run_naive_bayes_task.delay(data, target, features)
     result = task.get(timeout=120)
+ 
 
     # Guardar datos para PVA
     if 'accuracy' in result:
@@ -226,7 +236,7 @@ model.fit(X, y)
 
     return result
 
-
+ 
 
 tools = [
     fetch_api_data,
@@ -243,12 +253,15 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 Instrumentator().instrument(app).expose(app)
 
+ s
+ 
 llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
-planner = load_chat_planner(llm)
+planner = load_chat_planner(llm) 
 executor = load_agent_executor(llm, tools, verbose=True)
 agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
 
 
+ 
 # --- Endpoints ---
 @app.get("/download-report")
 def download_report():
@@ -295,6 +308,7 @@ async def chat_agent_handler(request: ChatRequest):
 
 # (El resto de la aplicación se mantiene igual)
 # ...
+ 
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
@@ -325,6 +339,7 @@ class PredictionRequest(BaseModel):
 class PipelineRequest(BaseModel):
     data: List[Dict[str, Any]]
     steps: List[Dict[str, Any]]
+ 
 
 @app.post("/predict/")
 async def predict(request: PredictionRequest):
@@ -337,6 +352,7 @@ async def predict(request: PredictionRequest):
         # Preparar datos para la predicción
         df_to_predict = pd.DataFrame(request.data)
 
+ 
         predictions = loaded_model.predict(df_to_predict)
 
         return {"predictions": predictions.tolist()}
@@ -454,3 +470,4 @@ async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error processing the uploaded file: {e}")
+ 

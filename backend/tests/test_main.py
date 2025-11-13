@@ -1,14 +1,18 @@
 import pytest
 from fastapi.testclient import TestClient
+ 
 import pandas as pd
 import io
 from unittest.mock import patch, MagicMock
+ 
 
 # Añadir el directorio raíz al path para que se pueda importar 'main'
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+ 
+ 
 # Importar la app de FastAPI
 from main import app
 
@@ -16,7 +20,9 @@ from main import app
 from logger import clear_log, log_step, get_logged_steps
 from visualizations import clear_visualizations, add_visualization, get_all_visualizations, get_mock_visualizations
 from pipeline import run_pipeline
+ 
 from report_generator import clear_report_artifacts, set_summary
+ 
 
 client = TestClient(app)
 
@@ -45,6 +51,7 @@ def test_pipeline_runner():
 # --- Pruebas para Endpoints de FastAPI ---
 
 def test_endpoints():
+ 
     # Prueba para /get-steps
     clear_log()
     log_step("test", "code")
@@ -69,6 +76,7 @@ def test_endpoints():
     assert len(response.json()["processed_data"]) == 1
 
     # Prueba para /upload-data
+ 
     clear_visualizations()
     csv_content = b"col1,col2\n1,2\n3,4"
     response = client.post("/upload-data/", files={"file": ("test.csv", io.BytesIO(csv_content), "text/csv")})
@@ -76,6 +84,7 @@ def test_endpoints():
     viz_data = get_all_visualizations()
     assert "etl_summary" in viz_data
 
+ 
     # --- Nueva Prueba para /download-report ---
     clear_report_artifacts()
     set_summary("Este es un resumen de prueba.")
@@ -84,7 +93,7 @@ def test_endpoints():
     assert response.headers['content-type'] == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     assert len(response.content) > 0
 
-
+ 
 # --- Pruebas para Herramientas (con mocks) ---
 
 @patch('main.fetch_api_data_task.delay')
@@ -99,3 +108,4 @@ def test_fetch_api_data_tool(mock_delay):
 
     assert "data" in result
     assert "etl_summary" in get_all_visualizations()
+ 
