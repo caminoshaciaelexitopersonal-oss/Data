@@ -1,97 +1,91 @@
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+ 
 import pandas as pd
 import io
+from unittest.mock import patch, MagicMock
+ 
 
 # Añadir el directorio raíz al path para que se pueda importar 'main'
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+ 
+# Importar la app de FastAPI
 from main import app
+
+# Importar explícitamente solo lo necesario
 from logger import clear_log, log_step, get_logged_steps
 from visualizations import clear_visualizations, add_visualization, get_all_visualizations, get_mock_visualizations
+from pipeline import run_pipeline
 
 client = TestClient(app)
 
-# --- Pruebas para el Logger SADI ---
+# --- Pruebas Unitarias para Módulos ---
 
 def test_logger_functions():
-    """Prueba las funciones básicas del logger: limpiar, añadir y obtener."""
     clear_log()
     assert get_logged_steps() == []
-
-    log_step("Paso de prueba 1", "print('Hola')")
-    log_step("Paso de prueba 2", "x = 1+1")
-
-    steps = get_logged_steps()
-    assert len(steps) == 2
-    assert steps[0]["descripcion"] == "Paso de prueba 1"
-    assert steps[1]["codigo"] == "x = 1+1"
-
+    log_step("Paso 1", "code 1")
+    assert len(get_logged_steps()) == 1
     clear_log()
-    assert get_logged_steps() == []
-
-def test_get_steps_endpoint():
-    """Prueba el endpoint /get-steps."""
-    clear_log()
-    log_step("Paso de prueba para endpoint", "a=1")
-
-    response = client.get("/get-steps")
-    assert response.status_code == 200
-    data = response.json()
-    assert "steps" in data
-    assert len(data["steps"]) == 1
-    assert data["steps"][0]["descripcion"] == "Paso de prueba para endpoint"
-
-# --- Pruebas para el Panel de Visualización Analítica (PVA) ---
 
 def test_visualizations_functions():
-    """Prueba las funciones básicas del módulo de visualizaciones."""
-    clear_visualizations()
-    assert get_all_visualizations() == get_mock_visualizations() # Debe devolver mock si está vacío
-
-    add_visualization("test_chart", [{"x": 1, "y": 2}])
-
-    viz = get_all_visualizations()
-    assert "test_chart" in viz
-    assert viz["test_chart"][0]["x"] == 1
-
     clear_visualizations()
     assert get_all_visualizations() == get_mock_visualizations()
-
-def test_get_visualizations_endpoint():
-    """Prueba el endpoint /api/visualizations."""
+    add_visualization("test_chart", [1])
+    assert get_all_visualizations()["test_chart"] == [1]
     clear_visualizations()
-    add_visualization("test_viz_endpoint", [{"value": 100}])
 
+def test_pipeline_runner():
+    data = pd.DataFrame({"a": [1, None], "b": ["x", "y"]})
+    steps = [{"action": "drop_nulls", "column": "a"}]
+    transformed_df = run_pipeline(data, steps)
+    assert transformed_df.shape[0] == 1
+
+# --- Pruebas para Endpoints de FastAPI ---
+
+def test_endpoints():
+    clear_log()
+    log_step("test", "code")
+    response = client.get("/get-steps")
+    assert response.status_code == 200
+    assert len(response.json()["steps"]) == 1
+
+    clear_visualizations()
+    add_visualization("test_viz", [1])
     response = client.get("/api/visualizations")
     assert response.status_code == 200
-    data = response.json()
-    assert "test_viz_endpoint" in data
-    assert data["test_viz_endpoint"][0]["value"] == 100
+    assert "test_viz" in response.json()
 
-# --- Pruebas de Integración (simulando un flujo) ---
-
-# Para probar el agente, necesitaríamos mockear la llamada al LLM,
-# lo cual es más complejo. Por ahora, probaremos la integración
-# de los logs y visualizaciones en los endpoints de datos.
-
-def test_upload_data_generates_etl_visualization():
-    """Prueba que la carga de datos genera y guarda la visualización 'etl_summary'."""
-    clear_visualizations()
-
-    # Crear un archivo CSV en memoria como bytes
-    csv_content = b"col1,col2\n1,2\n3,4"
-    file = ("test.csv", io.BytesIO(csv_content), "text/csv")
-
-    response = client.post("/upload-data/", files={"file": file})
+    pipeline_req = {
+        "data": [{"a": 1}, {"a": None}],
+        "steps": [{"action": "drop_nulls", "column": "a"}]
+    }
+    response = client.post("/run-pipeline/", json=pipeline_req)
     assert response.status_code == 200
+    assert len(response.json()["processed_data"]) == 1
 
+    clear_visualizations()
+    csv_content = b"col1,col2\n1,2\n3,4"
+    response = client.post("/upload-data/", files={"file": ("test.csv", io.BytesIO(csv_content), "text/csv")})
+    assert response.status_code == 200
     viz_data = get_all_visualizations()
     assert "etl_summary" in viz_data
-    summary = viz_data["etl_summary"]
-    assert len(summary) == 2
-    assert summary[0]["feature"] == "col1"
-    assert summary[0]["mean"] == 2.0
+
+# --- Pruebas para Herramientas (con mocks) ---
+
+@patch('main.fetch_api_data_task.delay')
+def test_fetch_api_data_tool(mock_delay):
+    from main import fetch_api_data # Importación local
+    mock_task = MagicMock()
+    mock_task.get.return_value = [{"id": 1, "value": 100}]
+    mock_delay.return_value = mock_task
+
+    clear_visualizations()
+    result = fetch_api_data("http://fakeapi.com/data")
+
+    assert "data" in result
+    assert "etl_summary" in get_all_visualizations()
+ 

@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
+import mlflow
  
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -30,10 +31,90 @@ from celery_worker import (
     run_kmeans_task,
     generate_correlation_heatmap_task,
     run_linear_regression_task,
-    run_naive_bayes_task
+    run_naive_bayes_task,
+    train_random_forest_classifier_task,
+    run_etl_pipeline_task,
+    fetch_api_data_task # Importar nueva tarea
 )
 
-# --- HERRAMIENTAS DEL AGENTE (DESPACHAN TAREAS) ---
+# --- Configuración de MLflow ---
+mlflow.set_tracking_uri("http://mlflow:5000")
+
+# --- HERRAMIENTAS DEL AGENTE ---
+@tool
+def fetch_api_data(url: str) -> Dict[str, Any]:
+    """
+    Obtiene datos desde una URL de API externa. La URL debe devolver una respuesta JSON
+    que sea una lista de objetos.
+    """
+    code = f"import httpx\n\nresponse = httpx.get('{url}')\ndata = response.json()"
+    log_step(f"Obteniendo datos desde la API: {url}", code)
+
+    task = fetch_api_data_task.delay(url)
+    api_data = task.get(timeout=120)
+
+    # Procesar los datos para el PVA (igual que en la carga de archivos)
+    if api_data:
+        df = pd.DataFrame(api_data)
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        summary = [{"feature": col, "mean": df[col].mean(), "std": df[col].std()} for col in numeric_cols]
+        add_visualization("etl_summary", summary)
+
+    return {
+        "message": f"Datos obtenidos con éxito desde {url}. Se encontraron {len(api_data)} registros.",
+        "data": api_data
+    }
+
+
+@tool
+def execute_etl_pipeline(data: List[Dict[str, Any]], pipeline_steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Ejecuta un pipeline de limpieza y transformación de datos (ETL).
+    'pipeline_steps' debe ser una lista de diccionarios, donde cada diccionario define una acción.
+    Ejemplo: [{"action": "drop_nulls", "column": "nombre_columna"}]
+    Devuelve los datos transformados.
+    """
+    code = f"pipeline = {json.dumps(pipeline_steps, indent=2)}\n# ... código de ejecución del pipeline ..."
+    log_step(f"Ejecutando pipeline ETL de {len(pipeline_steps)} pasos", code)
+
+    task = run_etl_pipeline_task.delay(data, pipeline_steps)
+    transformed_data = task.get(timeout=300)
+
+    return {
+        "message": f"Pipeline ETL ejecutado con éxito. Se procesaron {len(transformed_data)} filas.",
+        "processed_data": transformed_data
+    }
+
+@tool
+def train_random_forest_classifier(data: List[Dict[str, Any]], target: str, features: List[str]) -> Dict[str, Any]:
+    """
+    Entrena un modelo de clasificación RandomForest sobre los datos proporcionados,
+    registra el experimento en MLflow y devuelve el ID de la ejecución y la precisión.
+    """
+    experiment_name = "SADI_Classification"
+    code = f"""
+import mlflow
+from sklearn.ensemble import RandomForestClassifier
+
+mlflow.set_experiment("{experiment_name}")
+with mlflow.start_run():
+    # ... código de entrenamiento ...
+    model = RandomForestClassifier()
+    model.fit(X_train, y_train)
+    mlflow.sklearn.log_model(model, "random_forest_model")
+"""
+    log_step(f"Entrenando RandomForest para predecir '{target}' usando {features}", code)
+    task = train_random_forest_classifier_task.delay(data, target, features, experiment_name)
+    result = task.get(timeout=300)
+
+    if 'accuracy' in result:
+        current_data = get_all_visualizations().get("classification_accuracy", [])
+        current_data.append({"modelo": "Random Forest", "accuracy": result['accuracy']})
+        add_visualization("classification_accuracy", current_data)
+
+    return result
+
+# (Resto de herramientas se mantienen igual)
 @tool
 def run_kmeans_analysis(data: List[Dict[str, Any]], k: int, features: List[str]) -> Dict[str, Any]:
     """Runs K-Means clustering analysis on the provided data."""
@@ -135,15 +216,40 @@ model.fit(X, y)
     log_step(f"Ejecutando clasificación Naive Bayes: target='{target}', features={features}", code)
     task = run_naive_bayes_task.delay(data, target, features)
     result = task.get(timeout=120)
+ 
 
     # Guardar datos para PVA
     if 'accuracy' in result:
         add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
 
     return result
+ 
+
+    # Guardar datos para PVA
+    if 'accuracy' in result:
+        add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
+
+ 
+    return result
 
 
-tools = [run_kmeans_analysis, generate_correlation_heatmap, run_linear_regression, run_naive_bayes_classification]
+tools = [
+    fetch_api_data, # Nueva herramienta
+    execute_etl_pipeline,
+    run_kmeans_analysis,
+    generate_correlation_heatmap,
+    run_linear_regression,
+    run_naive_bayes_classification,
+    train_random_forest_classifier
+]
+
+# (Configuración del agente y de la app FastAPI se mantiene igual)
+ 
+
+# --- APP FASTAPI ---
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+Instrumentator().instrument(app).expose(app)
 
 # --- CONFIGURACIÓN DEL AGENTE PLAN-AND-EXECUTE ---
 llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
@@ -152,11 +258,8 @@ executor = load_agent_executor(llm, tools, verbose=True)
 agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
 
 
-# --- APP FASTAPI ---
-app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-Instrumentator().instrument(app).expose(app)
 
+# (Endpoints existentes se mantienen igual)
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
@@ -180,23 +283,42 @@ class ChatRequest(BaseModel):
     message: str
     data: List[Dict[str, Any]]
 
- 
-class DbConnectionRequest(BaseModel):
-    db_uri: str
-    query: str
+class PredictionRequest(BaseModel):
+    run_id: str
+    data: List[Dict[str, Any]]
 
-class MongoConnectionRequest(BaseModel):
-    mongo_uri: str
-    db_name: str
-    collection_name: str
+class PipelineRequest(BaseModel):
+    data: List[Dict[str, Any]]
+    steps: List[Dict[str, Any]]
 
-# Helper to serialize ObjectId
-class JSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
+@app.post("/predict/")
+async def predict(request: PredictionRequest):
+    """Carga un modelo desde MLflow y realiza predicciones."""
+    try:
+        # Cargar el modelo usando el run_id
+        logged_model = f"runs:/{request.run_id}/random_forest_model"
+        loaded_model = mlflow.sklearn.load_model(logged_model)
 
+        # Preparar datos para la predicción
+        df_to_predict = pd.DataFrame(request.data)
+
+        predictions = loaded_model.predict(df_to_predict)
+
+        return {"predictions": predictions.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante la predicción: {e}")
+
+@app.post("/run-pipeline/")
+async def run_pipeline_endpoint(request: PipelineRequest):
+    """Endpoint para ejecutar un pipeline ETL directamente."""
+    try:
+        task = run_etl_pipeline_task.delay(request.data, request.steps)
+        transformed_data = task.get(timeout=300)
+        return {"processed_data": transformed_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ejecutando el pipeline: {e}")
+
+# (Resto de los endpoints de carga de datos se mantienen igual)
 @app.post("/load-from-mongodb/")
 async def load_from_mongodb(request: MongoConnectionRequest):
     try:
