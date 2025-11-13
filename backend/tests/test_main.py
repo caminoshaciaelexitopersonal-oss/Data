@@ -1,14 +1,17 @@
 import pytest
 from fastapi.testclient import TestClient
+ 
 import pandas as pd
 import io
 from unittest.mock import patch, MagicMock
+ 
 
 # Añadir el directorio raíz al path para que se pueda importar 'main'
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+ 
 # Importar la app de FastAPI
 from main import app
 
@@ -85,3 +88,4 @@ def test_fetch_api_data_tool(mock_delay):
 
     assert "data" in result
     assert "etl_summary" in get_all_visualizations()
+ 

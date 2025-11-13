@@ -216,11 +216,20 @@ model.fit(X, y)
     log_step(f"Ejecutando clasificación Naive Bayes: target='{target}', features={features}", code)
     task = run_naive_bayes_task.delay(data, target, features)
     result = task.get(timeout=120)
+ 
 
     # Guardar datos para PVA
     if 'accuracy' in result:
         add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
 
+    return result
+ 
+
+    # Guardar datos para PVA
+    if 'accuracy' in result:
+        add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
+
+ 
     return result
 
 
@@ -235,6 +244,7 @@ tools = [
 ]
 
 # (Configuración del agente y de la app FastAPI se mantiene igual)
+ 
 
 # --- APP FASTAPI ---
 app = FastAPI()
