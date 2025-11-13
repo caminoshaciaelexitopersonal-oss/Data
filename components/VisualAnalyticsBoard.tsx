@@ -49,7 +49,9 @@ export const VisualAnalyticsBoard: React.FC = () => {
 
     if (loading) return <p className="p-8 text-white">Cargando visualizaciones...</p>;
     if (error) return <p className="p-8 text-red-400">Error: {error}</p>;
-    if (!data) return <p className="p-8 text-white">No hay datos de visualización disponibles.</p>;
+ 
+    if (!data) return <p className="p-8 text-white">No hay datos de visualización disponibles. Ejecuta un análisis para ver los gráficos.</p>;
+ 
 
     return (
         <div className="p-8 space-y-10 bg-gray-900 text-white min-h-full overflow-y-auto">
@@ -134,9 +136,19 @@ export const VisualAnalyticsBoard: React.FC = () => {
                 </motion.div>
             )}
 
-            <div className="text-center mt-10">
+ 
+            <div className="text-center mt-10 flex justify-center gap-4">
+                <a
+                    href={`${API_BASE_URL}/download-report`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    📥 Descargar Informe (.docx)
+                </a>
                 <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
-                    📥 Exportar Dashboard Completo
+                    🖨️ Exportar Dashboard (PDF/Imprimir)
+ 
                 </button>
             </div>
         </div>

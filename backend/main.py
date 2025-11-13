@@ -1,8 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import pandas as pd
 import io
 import mlflow
+ 
+import os
+ 
  
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -27,6 +30,11 @@ from logger import log_step, get_logged_steps, clear_log
 # --- Visualizations ---
 from visualizations import add_visualization, get_all_visualizations, clear_visualizations
 
+ 
+# --- Report Generator ---
+from report_generator import generate_report, set_summary, clear_report_artifacts
+
+ 
 from celery_worker import (
     run_kmeans_task,
     generate_correlation_heatmap_task,
@@ -34,13 +42,17 @@ from celery_worker import (
     run_naive_bayes_task,
     train_random_forest_classifier_task,
     run_etl_pipeline_task,
-    fetch_api_data_task # Importar nueva tarea
+ 
+    fetch_api_data_task
+ 
 )
 
 # --- Configuración de MLflow ---
 mlflow.set_tracking_uri("http://mlflow:5000")
 
-# --- HERRAMIENTAS DEL AGENTE ---
+ 
+# (Todas las herramientas se mantienen igual)
+ 
 @tool
 def fetch_api_data(url: str) -> Dict[str, Any]:
     """
@@ -114,7 +126,7 @@ with mlflow.start_run():
 
     return result
 
-# (Resto de herramientas se mantienen igual)
+ 
 @tool
 def run_kmeans_analysis(data: List[Dict[str, Any]], k: int, features: List[str]) -> Dict[str, Any]:
     """Runs K-Means clustering analysis on the provided data."""
@@ -223,18 +235,11 @@ model.fit(X, y)
         add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
 
     return result
- 
-
-    # Guardar datos para PVA
-    if 'accuracy' in result:
-        add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
 
  
-    return result
-
 
 tools = [
-    fetch_api_data, # Nueva herramienta
+    fetch_api_data,
     execute_etl_pipeline,
     run_kmeans_analysis,
     generate_correlation_heatmap,
@@ -243,23 +248,67 @@ tools = [
     train_random_forest_classifier
 ]
 
-# (Configuración del agente y de la app FastAPI se mantiene igual)
- 
-
-# --- APP FASTAPI ---
+# --- APP FASTAPI y Configuración del Agente ---
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 Instrumentator().instrument(app).expose(app)
 
-# --- CONFIGURACIÓN DEL AGENTE PLAN-AND-EXECUTE ---
+ s
+ 
 llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
-planner = load_chat_planner(llm)
+planner = load_chat_planner(llm) 
 executor = load_agent_executor(llm, tools, verbose=True)
 agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
 
 
+ 
+# --- Endpoints ---
+@app.get("/download-report")
+def download_report():
+    """Genera y devuelve el informe analítico como un archivo .docx."""
+    try:
+        report_buffer = generate_report()
 
-# (Endpoints existentes se mantienen igual)
+        # Guardar temporalmente para poder usar FileResponse
+        temp_report_path = "/tmp/sadi_report.docx"
+        with open(temp_report_path, "wb") as f:
+            f.write(report_buffer.read())
+
+        return FileResponse(
+            path=temp_report_path,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            filename='SADI_Informe_Analitico.docx'
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo generar el informe: {e}")
+
+@app.post("/chat/agent/")
+async def chat_agent_handler(request: ChatRequest):
+    try:
+        # Limpiar artefactos de ejecuciones anteriores
+        clear_log()
+        clear_visualizations()
+        clear_report_artifacts()
+
+        df = pd.DataFrame(request.data)
+        data_preview = df.head().to_string() if not df.empty else "No hay datos cargados."
+        inputs = {"input": request.message + "\n\nData Preview:\n" + data_preview}
+
+        # Ejecutar el agente
+        response = await agent_executor.ainvoke(inputs)
+
+        # Guardar la salida del agente como el resumen del informe
+        output = response.get("output", "El agente no produjo una conclusión final.")
+        set_summary(output)
+
+        return {"output": output}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en el agente de IA: {e}")
+
+
+# (El resto de la aplicación se mantiene igual)
+# ...
+ 
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
@@ -290,6 +339,7 @@ class PredictionRequest(BaseModel):
 class PipelineRequest(BaseModel):
     data: List[Dict[str, Any]]
     steps: List[Dict[str, Any]]
+ 
 
 @app.post("/predict/")
 async def predict(request: PredictionRequest):
@@ -302,6 +352,7 @@ async def predict(request: PredictionRequest):
         # Preparar datos para la predicción
         df_to_predict = pd.DataFrame(request.data)
 
+ 
         predictions = loaded_model.predict(df_to_predict)
 
         return {"predictions": predictions.tolist()}
@@ -419,20 +470,4 @@ async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error processing the uploaded file: {e}")
-
-@app.post("/chat/agent/")
-async def chat_agent_handler(request: ChatRequest):
-    try:
-        clear_log()
-        clear_visualizations()
-        df = pd.DataFrame(request.data)
  
-        data_preview = df.head().to_string() if not df.empty else "No hay datos cargados."
-
-        inputs = {"input": request.message + "\n\nData Preview:\n" + data_preview}
-
-        response = await agent_executor.ainvoke(inputs)
- 
-        return {"output": response.get("output")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en el agente de IA: {e}")
