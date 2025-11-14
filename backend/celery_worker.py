@@ -94,3 +94,24 @@ def run_etl_pipeline_task(data: List[Dict[str, Any]], steps: List[Dict[str, Any]
     df = pd.DataFrame(data)
     transformed_df = execute_etl_pipeline(df, steps)
     return transformed_df.to_dict(orient='records')
+
+# --- Nueva Tarea ETL Multi-Fuente ---
+from backend.app.services.etl_multisource_service import run_full_etl_process
+
+@celery_app.task(name='celery_worker.process_multiple_files_task')
+def process_multiple_files_task(file_contents: Dict[str, bytes]) -> Dict[str, Any]:
+    """
+    Tarea de Celery para orquestar el procesamiento ETL de múltiples archivos cargados.
+    """
+    try:
+        result = run_full_etl_process(file_contents)
+        return {
+            "status": "SUCCESS",
+            "message": "Procesamiento ETL completado.",
+            "results": result
+        }
+    except Exception as e:
+        # En caso de error, el estado de la tarea se marcará como FAILURE
+        # y la excepción se almacenará en el resultado de la tarea.
+        # Aquí se re-lanza para que Celery lo maneje.
+        raise e
