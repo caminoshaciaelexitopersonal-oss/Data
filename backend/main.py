@@ -19,10 +19,11 @@ import boto3
 from langchain.agents import AgentExecutor
 from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner
 from langchain.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
- 
 from langchain import hub
 from prometheus_fastapi_instrumentator import Instrumentator
+
+from backend.llm.llm_router import get_llm_for_agent
+from audit_logger import log_data_ingestion
 
 # --- Logger ---
 from logger import log_step, get_logged_steps, clear_log
@@ -229,7 +230,6 @@ model.fit(X, y)
     task = run_naive_bayes_task.delay(data, target, features)
     result = task.get(timeout=120)
  
-
     # Guardar datos para PVA
     if 'accuracy' in result:
         add_visualization("classification_accuracy", [{"modelo": "Naive Bayes", "accuracy": result['accuracy']}])
@@ -237,7 +237,6 @@ model.fit(X, y)
     return result
 
  
-
 tools = [
     fetch_api_data,
     execute_etl_pipeline,
@@ -253,10 +252,11 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 Instrumentator().instrument(app).expose(app)
 
- s
- 
-llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
-planner = load_chat_planner(llm) 
+# --- Configuración del Agente y LLM ---
+# El LLM se obtiene a través del router, permitiendo flexibilidad.
+# La preferencia de modelo podría venir de la solicitud en el futuro.
+llm = get_llm_for_agent(model_preference="gemini")
+planner = load_chat_planner(llm)
 executor = load_agent_executor(llm, tools, verbose=True)
 agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
 
@@ -385,6 +385,16 @@ async def load_from_mongodb(request: MongoConnectionRequest):
 
         df = pd.DataFrame(docs)
         df = df.where(pd.notna(df), None)
+
+        # Log the data ingestion event
+        if not df.empty:
+            log_data_ingestion(
+                source_type="mongodb",
+                source_identifier=f"mongodb://.../{request.db_name}/{request.collection_name}",
+                user_or_agent="user_mongodb_connection",
+                data=df
+            )
+
         return {"source": "mongodb", "data": df.to_dict(orient='records')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar MongoDB: {e}")
@@ -422,6 +432,14 @@ async def process_uploaded_file_content(content: bytes, filename: str, sheet_nam
             summary = [{"feature": col, "mean": df_cleaned[col].mean(), "std": df_cleaned[col].std()} for col in numeric_cols]
             add_visualization("etl_summary", summary)
 
+            # Log the data ingestion event for auditing
+            log_data_ingestion(
+                source_type="file_upload",
+                source_identifier=filename,
+                user_or_agent="user_upload", # This could be enhanced with user auth
+                data=df_cleaned
+            )
+
         return df_cleaned, sheet_names
 
     except Exception as e:
@@ -455,6 +473,14 @@ async def load_from_db(request: DbConnectionRequest):
             summary = [{"feature": col, "mean": df_cleaned[col].mean(), "std": df_cleaned[col].std()} for col in numeric_cols]
             add_visualization("etl_summary", summary)
 
+            # Log the data ingestion event
+            log_data_ingestion(
+                source_type="database",
+                source_identifier=f"db_{request.db_uri.split('@')[-1]}", # Anonymize credentials
+                user_or_agent="user_db_connection",
+                data=df_cleaned
+            )
+
         return {"source": "database", "data": df_cleaned.to_dict(orient='records')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar la base de datos: {e}")
@@ -470,4 +496,3 @@ async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error processing the uploaded file: {e}")
- 
