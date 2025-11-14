@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from typing import List
 from fastapi.responses import FileResponse
 import pandas as pd
+from celery.result import AsyncResult
 import io
 import mlflow
  
@@ -43,7 +45,7 @@ from celery_worker import (
     run_naive_bayes_task,
     train_random_forest_classifier_task,
     run_etl_pipeline_task,
- 
+    process_multiple_files_task,
     fetch_api_data_task
  
 )
@@ -251,6 +253,7 @@ tools = [
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 Instrumentator().instrument(app).expose(app)
+
 
 # --- Configuración del Agente y LLM ---
 # El LLM se obtiene a través del router, permitiendo flexibilidad.
@@ -486,6 +489,39 @@ async def load_from_db(request: DbConnectionRequest):
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar la base de datos: {e}")
 
  
+@app.post("/upload/multi", status_code=202)
+async def upload_multiple_files(files: List[UploadFile] = File(...)):
+    """
+    Endpoint para cargar y procesar múltiples archivos de datos de forma asíncrona.
+    """
+    try:
+        file_contents = {file.filename: await file.read() for file in files}
+
+        # Pasar el contenido de los archivos a una tarea de Celery
+        task = process_multiple_files_task.delay(file_contents)
+
+        return {"task_id": task.id, "message": "Los archivos han sido recibidos y están siendo procesados."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al iniciar el procesamiento de archivos: {e}")
+
+@app.get("/api/v1/etl/status/{task_id}")
+def get_etl_job_status(task_id: str):
+    """
+    Consulta el estado de un trabajo ETL previamente iniciado.
+    """
+    task_result = AsyncResult(task_id)
+
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": task_result.result if task_result.ready() else "Pending or running..."
+    }
+
+    if task_result.failed():
+        response["result"] = str(task_result.info) # Muestra la excepción
+
+    return response
+
 @app.post("/upload-data/")
 async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None)):
     try:
