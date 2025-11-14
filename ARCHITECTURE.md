@@ -58,3 +58,11 @@ El frontend seguirá una estructura basada en características (feature-based).
 4.  **Ejecución**: El `executor` ejecuta las herramientas (`tools.py`) secuencialmente.
 5.  **Auditoría y Logging**: Cada paso significativo se registra.
 6.  **Respuesta**: Se ensambla la respuesta y se devuelve al cliente.
+
+## 5. Flujo de Ingesta y ETL Modular (Fase 2)
+1.  **Recepción**: La API en `routes_etl.py` recibe una solicitud.
+2.  **Orquestación**: `etl_service.py` genera un `job_id`.
+3.  **Tareas Asíncronas**: `celery_tasks.py` procesa cada archivo.
+4.  **Carga Modular**: Los `etl_providers` convierten archivos a DataFrames.
+5.  **Auditoría**: `audit_service.py` registra logs y guarda bloques de código.
+6.  **Unificación**: Se crea un `master_dataset.csv`.
