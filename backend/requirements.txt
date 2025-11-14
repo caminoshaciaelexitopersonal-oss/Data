@@ -9,6 +9,7 @@ psycopg2-binary==2.9.11
 langchain==0.1.20
 langchain-core==0.1.52
 langchain-google-genai==0.0.9
+langchain-openai==0.1.14
 langchain-community==0.0.38
 langchainhub==0.1.20
 langchain-experimental==0.0.57
