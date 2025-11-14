@@ -1,0 +1,24 @@
+[
+    {
+        "nombre_del_archivo": "test_file.csv",
+        "fecha_hora": "2025-11-14T01:42:59.909530Z",
+        "hash_del_dataset": "1eaa21d7ff9b394999ac296eca250d191067cd8b9a8f13078b5b8511e81a6994",
+        "tama\u00f1o_bytes": 364,
+        "columnas_detectadas": [
+            "columna_a",
+            "columna_b"
+        ],
+        "procesado_por": "Prueba Autom\u00e1tica"
+    },
+    {
+        "nombre_del_archivo": "test_file.csv",
+        "fecha_hora": "2025-11-14T01:43:22.311800Z",
+        "hash_del_dataset": "1eaa21d7ff9b394999ac296eca250d191067cd8b9a8f13078b5b8511e81a6994",
+        "tama\u00f1o_bytes": 364,
+        "columnas_detectadas": [
+            "columna_a",
+            "columna_b"
+        ],
+        "procesado_por": "Prueba Autom\u00e1tica"
+    }
+]

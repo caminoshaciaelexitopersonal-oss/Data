@@ -34,6 +34,9 @@ from visualizations import add_visualization, get_all_visualizations, clear_visu
 # --- Report Generator ---
 from report_generator import generate_report, set_summary, clear_report_artifacts
 
+# --- Audit Logger ---
+from audit_logger import log_audit_record
+
  
 from celery_worker import (
     run_kmeans_task,
@@ -385,6 +388,10 @@ async def load_from_mongodb(request: MongoConnectionRequest):
 
         df = pd.DataFrame(docs)
         df = df.where(pd.notna(df), None)
+
+        # Registrar auditoría
+        log_audit_record(f"MongoDB: {request.db_name}/{request.collection_name}", df)
+
         return {"source": "mongodb", "data": df.to_dict(orient='records')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar MongoDB: {e}")
@@ -437,6 +444,9 @@ async def load_from_s3(request: S3ConnectionRequest):
 
         df, sheet_names = await process_uploaded_file_content(content, request.object_key)
 
+        # Registrar auditoría
+        log_audit_record(f"S3: {request.bucket_name}/{request.object_key}", df)
+
         return {"source": "s3", "data": df.to_dict(orient='records'), "sheet_names": sheet_names}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading from S3: {e}")
@@ -455,6 +465,9 @@ async def load_from_db(request: DbConnectionRequest):
             summary = [{"feature": col, "mean": df_cleaned[col].mean(), "std": df_cleaned[col].std()} for col in numeric_cols]
             add_visualization("etl_summary", summary)
 
+        # Registrar auditoría
+        log_audit_record(f"Database Query: {request.query[:100]}...", df_cleaned)
+
         return {"source": "database", "data": df_cleaned.to_dict(orient='records')}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al conectar o consultar la base de datos: {e}")
@@ -465,6 +478,10 @@ async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None
     try:
         content = await file.read()
         df, sheet_names = await process_uploaded_file_content(content, file.filename, sheet_name)
+
+        # Registrar auditoría
+        log_audit_record(file.filename, df)
+
         return {"filename": file.filename, "data": df.to_dict(orient='records'), "sheet_names": sheet_names}
     except Exception as e:
         if isinstance(e, HTTPException):
