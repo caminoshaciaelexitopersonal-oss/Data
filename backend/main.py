@@ -40,6 +40,7 @@ from report_generator import generate_report, set_summary, clear_report_artifact
 from docx2pdf import convert
 
 # --- Custom Services ---
+from services.eda_service import generate_data_health_report
 from services import eda_service, pca_service
 from app.export import code_exporter
  
@@ -49,6 +50,11 @@ from celery_worker import (
     run_linear_regression_task,
     run_naive_bayes_task,
     train_random_forest_classifier_task,
+    train_svm_classifier_task,
+    train_decision_tree_classifier_task,
+    train_mlp_classifier_task,
+    run_arima_forecast_task,
+    explain_model_features_task,
     run_etl_pipeline_task,
     process_multiple_files_task,
     fetch_api_data_task
@@ -131,6 +137,159 @@ with mlflow.start_run():
         current_data = get_all_visualizations().get("classification_accuracy", [])
         current_data.append({"modelo": "Random Forest", "accuracy": result['accuracy']})
         add_visualization("classification_accuracy", current_data)
+
+    return result
+
+
+@tool
+def train_svm_classifier(data: List[Dict[str, Any]], target: str, features: List[str], kernel: str = 'rbf', C: float = 1.0) -> Dict[str, Any]:
+    """
+    Entrena un modelo de clasificación Support Vector Machine (SVM) sobre los datos,
+    registra el experimento en MLflow y devuelve el ID de la ejecución y la precisión.
+    'kernel' puede ser 'linear', 'poly', 'rbf', 'sigmoid'.
+    'C' es el parámetro de regularización.
+    """
+    experiment_name = "SADI_Classification"
+    code = f"""
+import mlflow
+from sklearn.svm import SVC
+
+mlflow.set_experiment("{experiment_name}")
+with mlflow.start_run():
+    # ... código de entrenamiento SVM ...
+    model = SVC(kernel='{kernel}', C={C})
+    model.fit(X_train, y_train)
+    mlflow.sklearn.log_model(model, "svm_model")
+"""
+    log_step(f"Entrenando SVM para predecir '{target}' usando {features} con kernel='{kernel}'", code)
+    task = train_svm_classifier_task.delay(data, target, features, experiment_name, kernel, C)
+    result = task.get(timeout=300)
+
+    if 'accuracy' in result:
+        current_data = get_all_visualizations().get("classification_accuracy", [])
+        current_data.append({"modelo": "SVM", "accuracy": result['accuracy']})
+        add_visualization("classification_accuracy", current_data)
+
+    return result
+
+
+@tool
+def train_decision_tree_classifier(data: List[Dict[str, Any]], target: str, features: List[str], max_depth: int = None) -> Dict[str, Any]:
+    """
+    Entrena un modelo de clasificación de Árbol de Decisión sobre los datos,
+    registra el experimento en MLflow y devuelve el ID de la ejecución y la precisión.
+    'max_depth' es la profundidad máxima del árbol.
+    """
+    experiment_name = "SADI_Classification"
+    code = f"""
+import mlflow
+from sklearn.tree import DecisionTreeClassifier
+
+mlflow.set_experiment("{experiment_name}")
+with mlflow.start_run():
+    # ... código de entrenamiento de Árbol de Decisión ...
+    model = DecisionTreeClassifier(max_depth={max_depth})
+    model.fit(X_train, y_train)
+    mlflow.sklearn.log_model(model, "decision_tree_model")
+"""
+    log_step(f"Entrenando Árbol de Decisión para predecir '{target}' usando {features}", code)
+    task = train_decision_tree_classifier_task.delay(data, target, features, experiment_name, max_depth)
+    result = task.get(timeout=300)
+
+    if 'accuracy' in result:
+        current_data = get_all_visualizations().get("classification_accuracy", [])
+        current_data.append({"modelo": "Árbol de Decisión", "accuracy": result['accuracy']})
+        add_visualization("classification_accuracy", current_data)
+
+    return result
+
+
+@tool
+def train_mlp_classifier(data: List[Dict[str, Any]], target: str, features: List[str]) -> Dict[str, Any]:
+    """
+    Entrena un modelo de Red Neuronal (MLP Classifier) sobre los datos,
+    registra el experimento en MLflow y devuelve el ID de la ejecución y la precisión.
+    """
+    experiment_name = "SADI_Classification"
+    code = f"""
+import mlflow
+from sklearn.neural_network import MLPClassifier
+
+mlflow.set_experiment("{experiment_name}")
+with mlflow.start_run():
+    # ... código de entrenamiento de MLP ...
+    model = MLPClassifier(random_state=42, max_iter=500)
+    model.fit(X_train, y_train)
+    mlflow.sklearn.log_model(model, "mlp_model")
+"""
+    log_step(f"Entrenando Red Neuronal (MLP) para predecir '{target}' usando {features}", code)
+    task = train_mlp_classifier_task.delay(data, target, features, experiment_name)
+    result = task.get(timeout=300)
+
+    if 'accuracy' in result:
+        current_data = get_all_visualizations().get("classification_accuracy", [])
+        current_data.append({"modelo": "Red Neuronal (MLP)", "accuracy": result['accuracy']})
+        add_visualization("classification_accuracy", current_data)
+
+    return result
+
+
+@tool
+def run_arima_forecast(data: List[Dict[str, Any]], date_column: str, value_column: str, steps: int) -> Dict[str, Any]:
+    """
+    Realiza un pronóstico de series temporales utilizando el modelo ARIMA.
+    'date_column' debe ser el nombre de la columna que contiene las fechas.
+    'value_column' debe ser el nombre de la columna con los valores a pronosticar.
+    'steps' es el número de períodos futuros a pronosticar.
+    """
+    code = f"""
+from statsmodels.tsa.arima.model import ARIMA
+import pandas as pd
+
+df = pd.DataFrame(data)
+# ... código de preparación de datos y pronóstico ...
+"""
+    log_step(f"Ejecutando pronóstico ARIMA en '{value_column}' para {steps} pasos", code)
+    task = run_arima_forecast_task.delay(data, date_column, value_column, steps)
+    result = task.get(timeout=300)
+
+    # Añadir datos de pronóstico al PVA
+    if 'forecast' in result:
+        forecast_data = [{"date": str(date), "value": val} for date, val in result['forecast'].items()]
+
+        # Añadir algunos datos históricos para el contexto
+        df = pd.DataFrame(data)
+        df[date_column] = pd.to_datetime(df[date_column])
+        recent_history = df.nlargest(3 * steps, date_column) # Tomar 3x los pasos de pronóstico como historia
+
+        historical_data = [{"date": str(row[date_column]), "value": row[value_column]} for _, row in recent_history.iterrows()]
+
+        add_visualization("timeseries_forecast", {"history": historical_data, "forecast": forecast_data})
+
+    return result
+
+
+@tool
+def explain_model_features(run_id: str, data: List[Dict[str, Any]], features: List[str]) -> Dict[str, Any]:
+    """
+    Analiza un modelo de clasificación ya entrenado (usando su 'run_id' de MLflow)
+    para explicar la importancia de sus características utilizando SHAP.
+    Devuelve un gráfico de la importancia de las características.
+    """
+    code = f"""
+import shap
+import mlflow
+
+# Cargar modelo y generar explicaciones SHAP
+model = mlflow.sklearn.load_model("runs:/{run_id}/model")
+# ...
+"""
+    log_step(f"Generando análisis de importancia de características (SHAP) para el modelo con run_id='{run_id}'", code)
+    task = explain_model_features_task.delay(run_id, data, features)
+    result = task.get(timeout=300)
+
+    if 'plot_base64' in result:
+        add_visualization("feature_importance_plot", {"plot": result['plot_base64']})
 
     return result
 
@@ -312,6 +471,11 @@ tools = [
     run_linear_regression,
     run_naive_bayes_classification,
     train_random_forest_classifier,
+    train_svm_classifier,
+    train_decision_tree_classifier,
+    train_mlp_classifier,
+    run_arima_forecast,
+    explain_model_features,
     run_advanced_eda,
     run_pca_analysis
 ]
@@ -494,6 +658,24 @@ async def run_pipeline_endpoint(request: PipelineRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error ejecutando el pipeline: {e}")
 
+
+class DataHealthRequest(BaseModel):
+    data: List[Dict[str, Any]]
+
+@app.post("/data-health-report/")
+async def get_data_health_report(request: DataHealthRequest):
+    """
+    Genera un informe de salud y calidad sobre un conjunto de datos proporcionado.
+    """
+    try:
+        report = generate_data_health_report(request.data)
+        if report.get("status") == "error":
+            raise HTTPException(status_code=400, detail=report.get("message"))
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando el informe de salud de los datos: {e}")
+
+
 # (Resto de los endpoints de carga de datos se mantienen igual)
 @app.post("/load-from-mongodb/")
 async def load_from_mongodb(request: MongoConnectionRequest):
@@ -674,3 +856,24 @@ def export_code():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al exportar el código: {e}")
+
+
+@app.get("/export/notebook")
+def export_notebook():
+    """
+    Exporta el análisis completo como un notebook de Jupyter (.ipynb).
+    """
+    try:
+        steps = get_logged_steps()
+        if not steps:
+            raise HTTPException(status_code=404, detail="No se ha generado ningún análisis para exportar.")
+
+        notebook_content = code_exporter.export_analysis_to_notebook(steps)
+
+        return StreamingResponse(
+            io.StringIO(notebook_content),
+            media_type="application/x-ipynb+json",
+            headers={"Content-Disposition": "attachment; filename=sadi_analisis.ipynb"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al exportar el notebook: {e}")

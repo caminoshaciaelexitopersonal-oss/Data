@@ -92,3 +92,79 @@ def generate_advanced_eda(data: List[Dict[str, Any]]) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "message": f"Ocurrió un error durante la generación del EDA: {e}"}
+
+
+# --- Data Quality and Health Score Service ---
+
+def _calculate_missing_values(df: pd.DataFrame) -> Dict[str, Any]:
+    """Calcula el porcentaje de valores faltantes por columna."""
+    missing_percentage = (df.isnull().sum() / len(df)) * 100
+    return {
+        "total_percentage": missing_percentage.mean(),
+        "by_column": missing_percentage.to_dict()
+    }
+
+def _calculate_duplicates(df: pd.DataFrame) -> Dict[str, Any]:
+    """Calcula el número y porcentaje de filas duplicadas."""
+    duplicate_count = df.duplicated().sum()
+    duplicate_percentage = (duplicate_count / len(df)) * 100 if len(df) > 0 else 0
+    return {
+        "count": duplicate_count,
+        "percentage": duplicate_percentage
+    }
+
+def _summarize_data_types(df: pd.DataFrame) -> Dict[str, int]:
+    """Resume los tipos de datos presentes en el DataFrame."""
+    return df.dtypes.astype(str).value_counts().to_dict()
+
+def _calculate_cardinality(df: pd.DataFrame) -> Dict[str, Any]:
+    """Calcula la cardinalidad de las columnas categóricas."""
+    cardinality_report = {}
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    for col in categorical_cols:
+        unique_count = df[col].nunique()
+        cardinality_report[col] = unique_count
+    return cardinality_report
+
+def generate_data_health_report(data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Función principal que genera un informe de salud de datos completo y una puntuación.
+    """
+    if not data:
+        return {"error": "No se proporcionaron datos para el informe de salud."}
+
+    try:
+        df = pd.DataFrame(data)
+        if df.empty:
+            return {"error": "El DataFrame está vacío."}
+
+        # Realizar todas las comprobaciones de calidad
+        missing_values = _calculate_missing_values(df)
+        duplicates = _calculate_duplicates(df)
+        data_types = _summarize_data_types(df)
+        cardinality = _calculate_cardinality(df)
+
+        # Calcular el Data Health Score
+        score = 100
+        score -= missing_values['total_percentage'] * 1.5  # Penalización más alta para valores nulos
+        score -= duplicates['percentage']  # Penalización directa por duplicados
+
+        # Penalización leve por tener columnas con cardinalidad muy baja (casi constantes)
+        for col, num_unique in cardinality.items():
+            if num_unique <= 1 and len(df) > 1:
+                score -= 5
+
+        health_score = max(0, round(score, 2))  # Asegurar que el score no sea negativo
+
+        return {
+            "status": "success",
+            "health_score": health_score,
+            "report": {
+                "missing_values": missing_values,
+                "duplicates": duplicates,
+                "data_types_summary": data_types,
+                "cardinality_summary": cardinality,
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Ocurrió un error durante la generación del informe de salud: {e}"}

@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from hashlib import sha256
+import difflib
 from typing import List, Dict, Any
 import pandas as pd
 
@@ -79,3 +80,74 @@ def log_data_ingestion(
 
     except IOError as e:
         print(f"Error writing to audit log: {e}")
+
+
+# --- Sistema de LOCK Lógico ---
+
+PROTECTED_FILES = {
+    "backend/main.py",
+    "backend/celery_worker.py",
+    "docker-compose.yml",
+    "App.tsx",
+    "package.json",
+    "backend/requirements.txt",
+    "backend/audit_logger.py"  # Proteger este mismo archivo
+}
+
+class ProtectedFileError(Exception):
+    """Excepción personalizada para intentos de modificar archivos protegidos."""
+    pass
+
+def verify_path_is_not_protected(filepath: str):
+    """
+    Verifica si una ruta de archivo está en la lista de protegidos.
+    Lanza una excepción ProtectedFileError si la ruta está protegida.
+    """
+    if filepath in PROTECTED_FILES:
+        raise ProtectedFileError(
+            f"Operación denegada. El archivo '{filepath}' está protegido por el sistema de LOCK lógico."
+        )
+
+# --- Fin del Sistema de LOCK Lógico ---
+
+
+# --- Verificador de Diferencias (Diff Checker) ---
+
+class DestructiveChangeError(Exception):
+    """Excepción para cambios que eliminan código de forma no autorizada."""
+    pass
+
+def verify_change_is_not_destructive(
+    filepath: str,
+    original_content: str,
+    new_content: str,
+    deletion_threshold: int = 10
+):
+    """
+    Analiza un 'diff' entre el contenido original y el nuevo.
+    Lanza una excepción si el cambio se considera destructivo (elimina más líneas de las que añade).
+    """
+    diff = list(difflib.unified_diff(
+        original_content.splitlines(keepends=True),
+        new_content.splitlines(keepends=True),
+        fromfile=f"a/{filepath}",
+        tofile=f"b/{filepath}",
+    ))
+
+    # Contar líneas eliminadas y añadidas
+    deletions = sum(1 for line in diff if line.startswith('-') and not line.startswith('---'))
+    additions = sum(1 for line in diff if line.startswith('+') and not line.startswith('+++'))
+
+    net_change = additions - deletions
+
+    # Lógica de seguridad:
+    # Si hay más eliminaciones que adiciones, y el número de eliminaciones supera un umbral,
+    # se considera un cambio destructivo.
+    if net_change < 0 and deletions > deletion_threshold:
+        raise DestructiveChangeError(
+            f"Operación denegada en '{filepath}'. El cambio propuesto elimina {deletions} "
+            f"líneas y solo añade {additions}, lo cual se considera una modificación destructiva. "
+            "Se requiere autorización explícita para eliminar código."
+        )
+
+# --- Fin del Verificador de Diferencias ---

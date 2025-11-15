@@ -125,6 +125,7 @@ export interface State {
   loadingMessage: string;
   qualityReport: QualityReport;
   outlierReport: OutlierReport;
+  healthReport?: any; // Consider creating a specific type for the health report
   clusterResults: ClusterResult | null;
   classificationResults: ClassificationResult | null;
   regressionResults: RegressionResult | null;
@@ -142,6 +143,7 @@ export interface State {
 export type Action =
   | { type: 'SET_LOADING'; payload: { isLoading: boolean; message?: string } }
   | { type: 'SET_DATA_LOADED'; payload: { data: DataPoint[]; originalData: DataPoint[]; fileName: string; qualityReport: QualityReport; outlierReport: OutlierReport } }
+  | { type: 'SET_DATA_HEALTH_REPORT'; payload: { healthReport: any } }
   | { type: 'SET_PROCESSED_DATA'; payload: { processedData: DataPoint[]; qualityReport: QualityReport; outlierReport: OutlierReport } }
   | { type: 'SET_VIEW'; payload: View }
   | { type: 'SET_SHEET_MODAL'; payload: { isOpen: boolean; sheetNames?: string[]; file?: File | null } }

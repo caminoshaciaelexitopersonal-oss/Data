@@ -82,70 +82,8 @@ const parseExcel = async (file: File): Promise<{ sheetNames: string[], firstShee
 
 // --- DATA ANALYSIS ---
 
-export const analyzeDataQuality = (data: DataPoint[]): { [key: string]: { nulls: number; type: string } } => {
-    if (data.length === 0) return {};
-
-    const headers = Object.keys(data[0]);
-    const qualityReport: { [key: string]: { nulls: number; type: string } } = {};
-
-    headers.forEach(header => {
-        let nullCount = 0;
-        let numericCount = 0;
-        let nonNumericCount = 0;
-
-        data.forEach(row => {
-            const value = row[header];
-            if (value === null || value === undefined || value === '') {
-                nullCount++;
-            } else if (typeof value === 'number' && isFinite(value)) {
-                numericCount++;
-            } else {
-                nonNumericCount++;
-            }
-        });
-
-        // Determine type based on majority of non-null values
-        const type = numericCount > nonNumericCount ? 'numeric' : 'categorical';
-
-        qualityReport[header] = {
-            nulls: nullCount,
-            type: type,
-        };
-    });
-
-    return qualityReport;
-};
-
-
-export const detectOutliers = (data: DataPoint[], qualityReport: { [key: string]: { type: string } }): OutlierReport => {
-    const outlierReport: OutlierReport = {};
-    const numericHeaders = Object.keys(qualityReport).filter(h => qualityReport[h].type === 'numeric');
-
-    numericHeaders.forEach(header => {
-        const values = data.map(row => row[header] as number).filter(v => v !== null && typeof v === 'number' && isFinite(v));
-        if (values.length < 5) return; // Not enough data for robust outlier detection
-
-        const sortedValues = [...values].sort((a, b) => a - b);
-        const q1 = sortedValues[Math.floor(sortedValues.length * 0.25)];
-        const q3 = sortedValues[Math.floor(sortedValues.length * 0.75)];
-        const iqr = q3 - q1;
-
-        const lowerBound = q1 - 1.5 * iqr;
-        const upperBound = q3 + 1.5 * iqr;
-
-        const outliers = values.filter(v => v < lowerBound || v > upperBound);
-
-        if (outliers.length > 0) {
-            outlierReport[header] = {
-                count: outliers.length,
-                lowerBound,
-                upperBound,
-            };
-        }
-    });
-
-    return outlierReport;
-};
+// Las funciones analyzeDataQuality y detectOutliers han sido deprecadas y reemplazadas
+// por el servicio de backend /data-health-report/
 
 // --- DATA TRANSFORMATION ---
 

@@ -4,7 +4,10 @@ from typing import List, Dict, Any
 import mlflow
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score
 from pipeline import run_pipeline as execute_etl_pipeline
 import httpx # Importar httpx
@@ -68,15 +71,16 @@ def train_random_forest_classifier_task(
         mlflow.log_param("n_estimators", n_estimators)
         mlflow.log_param("max_depth", max_depth)
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
         model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
-        model.fit(X_train, y_train)
 
-        y_pred = model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
+        # Usar validación cruzada para una evaluación más robusta
+        scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+        accuracy = scores.mean()
 
-        mlflow.log_metric("accuracy", accuracy)
+        mlflow.log_metric("cross_val_accuracy", accuracy)
+
+        # Entrenar el modelo final en todos los datos para registrarlo
+        model.fit(X, y)
         mlflow.sklearn.log_model(model, "random_forest_model")
 
         return {
@@ -84,6 +88,171 @@ def train_random_forest_classifier_task(
             "run_id": run_id,
             "accuracy": accuracy
         }
+
+@celery_app.task
+def train_svm_classifier_task(
+    data: List[Dict[str, Any]], target: str, features: List[str], experiment_name: str, kernel: str = 'rbf', C: float = 1.0
+) -> Dict[str, Any]:
+    """Entrena un Support Vector Classifier y lo registra en MLflow."""
+    df = pd.DataFrame(data)
+    mlflow.set_experiment(experiment_name)
+    with mlflow.start_run() as run:
+        run_id = run.info.run_id
+        X = df[features]
+        y = df[target]
+
+        mlflow.log_param("kernel", kernel)
+        mlflow.log_param("C", C)
+
+        model = SVC(kernel=kernel, C=C, random_state=42)
+
+        scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+        accuracy = scores.mean()
+
+        mlflow.log_metric("cross_val_accuracy", accuracy)
+
+        model.fit(X, y)
+        mlflow.sklearn.log_model(model, "svm_model")
+
+        return {
+            "message": "Modelo SVM entrenado y registrado en MLflow con éxito.",
+            "run_id": run_id,
+            "accuracy": accuracy
+        }
+
+
+@celery_app.task
+def train_decision_tree_classifier_task(
+    data: List[Dict[str, Any]], target: str, features: List[str], experiment_name: str, max_depth: int = None
+) -> Dict[str, Any]:
+    """Entrena un DecisionTreeClassifier y lo registra en MLflow."""
+    df = pd.DataFrame(data)
+    mlflow.set_experiment(experiment_name)
+    with mlflow.start_run() as run:
+        run_id = run.info.run_id
+        X = df[features]
+        y = df[target]
+
+        mlflow.log_param("max_depth", max_depth or "None")
+
+        model = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
+
+        scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+        accuracy = scores.mean()
+
+        mlflow.log_metric("cross_val_accuracy", accuracy)
+
+        model.fit(X, y)
+        mlflow.sklearn.log_model(model, "decision_tree_model")
+
+        return {
+            "message": "Modelo de Árbol de Decisión entrenado y registrado en MLflow con éxito.",
+            "run_id": run_id,
+            "accuracy": accuracy
+        }
+
+
+@celery_app.task
+def train_mlp_classifier_task(
+    data: List[Dict[str, Any]], target: str, features: List[str], experiment_name: str
+) -> Dict[str, Any]:
+    """Entrena un MLPClassifier y lo registra en MLflow."""
+    df = pd.DataFrame(data)
+    mlflow.set_experiment(experiment_name)
+    with mlflow.start_run() as run:
+        run_id = run.info.run_id
+        X = df[features]
+        y = df[target]
+
+        model = MLPClassifier(random_state=42, max_iter=500)
+
+        scores = cross_val_score(model, X, y, cv=5, scoring='accuracy')
+        accuracy = scores.mean()
+
+        mlflow.log_metric("cross_val_accuracy", accuracy)
+
+        model.fit(X, y)
+        mlflow.sklearn.log_model(model, "mlp_model")
+
+        return {
+            "message": "Modelo MLP entrenado y registrado en MLflow con éxito.",
+            "run_id": run_id,
+            "accuracy": accuracy
+        }
+
+
+@celery_app.task
+def run_arima_forecast_task(
+    data: List[Dict[str, Any]], date_column: str, value_column: str, steps: int
+) -> Dict[str, Any]:
+    """Ejecuta un pronóstico ARIMA y devuelve los resultados."""
+    from statsmodels.tsa.arima.model import ARIMA
+
+    df = pd.DataFrame(data)
+    df[date_column] = pd.to_datetime(df[date_column])
+    df = df.set_index(date_column)
+
+    series = df[value_column]
+
+    # Simple order selection (p,d,q). Could be improved with auto_arima.
+    model = ARIMA(series, order=(5,1,0))
+    model_fit = model.fit()
+
+    forecast = model_fit.forecast(steps=steps)
+
+    return {
+        "message": f"Pronóstico de {steps} pasos completado.",
+        "forecast": forecast.to_dict()
+    }
+
+
+@celery_app.task
+def explain_model_features_task(
+    run_id: str, data: List[Dict[str, Any]], features: List[str]
+) -> Dict[str, Any]:
+    """Carga un modelo de MLflow y genera un gráfico de importancia de características SHAP."""
+    import shap
+    import matplotlib.pyplot as plt
+    import io
+    import base64
+
+    # Cargar modelo desde MLflow
+    logged_model = f"runs:/{run_id}/random_forest_model" # Asume un nombre de modelo común
+    try:
+        model = mlflow.sklearn.load_model(logged_model)
+    except Exception:
+        # Intenta con otros nombres de modelo si falla
+        try:
+            model = mlflow.sklearn.load_model(f"runs:/{run_id}/svm_model")
+        except Exception:
+            try:
+                model = mlflow.sklearn.load_model(f"runs:/{run_id}/decision_tree_model")
+            except Exception:
+                model = mlflow.sklearn.load_model(f"runs:/{run_id}/mlp_model")
+
+
+    df = pd.DataFrame(data)
+    X = df[features]
+
+    # Usar SHAP para explicar el modelo
+    explainer = shap.Explainer(model, X)
+    shap_values = explainer(X)
+
+    # Generar el gráfico de resumen
+    fig, ax = plt.subplots()
+    shap.summary_plot(shap_values, X, plot_type="bar", show=False)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+    plot_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return {
+        "message": "Análisis de importancia de características completado.",
+        "plot_base64": plot_base64
+    }
+
 
 # --- Tarea de Pipeline ETL ---
 @celery_app.task
