@@ -20,8 +20,7 @@ import json
 import boto3
 import base64
  
-from langchain.agents import AgentExecutor
-from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner
+from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner, AgentExecutor
 from langchain.tools import tool
 from langchain import hub
 from prometheus_fastapi_instrumentator import Instrumentator

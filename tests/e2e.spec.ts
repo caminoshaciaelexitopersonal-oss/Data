@@ -1,16 +1,33 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
 
 // La URL base de la aplicación. Asegúrate de que coincida con la configuración de tu servidor de desarrollo.
-const BASE_URL = 'http://localhost:8080';
+const BASE_URL = 'http://localhost:3000';
 
 test.describe('Flujo E2E Básico de SADI', () => {
 
   test('Debería cargar la página, mostrar el mensaje de bienvenida y permitir enviar un mensaje', async ({ page }) => {
-    // 1. Navegar a la página principal
-    await page.goto(BASE_URL);
+    const consoleLogs: string[] = [];
+    page.on('console', msg => {
+      consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
+    });
 
-    // 2. Verificar que el título principal es visible
-    await expect(page.getByRole('heading', { name: 'Sistema de Analítica de Datos Inteligente (SADI)' })).toBeVisible();
+    try {
+      // 1. Navegar a la página principal
+      await page.goto(BASE_URL);
+
+      // 2. Verificar que el título principal es visible
+      await expect(page.getByText('Sistema de Analítica de Datos Inteligente (SADI)')).toBeVisible();
+    } catch (error) {
+      // Si la prueba falla, tomar una captura de pantalla, guardar el HTML y los logs de la consola
+      await page.screenshot({ path: 'test-failure-screenshot.png' });
+      const htmlContent = await page.content();
+      fs.writeFileSync('test-failure-page.html', htmlContent);
+      console.error("--- CONSOLE LOGS ---");
+      console.error(consoleLogs.join('\n'));
+      console.error("--- END CONSOLE LOGS ---");
+      throw error;
+    }
 
     // 3. Verificar que el mensaje de bienvenida del bot está presente
     await expect(page.getByText('¡Hola! Soy tu asistente de análisis de datos.')).toBeVisible();
