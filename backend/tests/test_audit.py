@@ -1,7 +1,7 @@
 import pytest
 import json
 from pathlib import Path
-from backend.app.services import audit_service
+from ..app.services import audit_service
 
 @pytest.fixture
 def temp_audit_log(tmp_path: Path) -> Path:

@@ -45,7 +45,18 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose }) => 
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
             <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-gray-700 max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">Pasos Técnicos y Código Fuente</h2>
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Pasos Técnicos y Código Fuente</h2>
+                        {steps.length > 0 && (
+                            <a
+                                href={`${API_BASE_URL}/export/code`}
+                                download="sadi_codigo_exportado.zip"
+                                className="text-sm text-cyan-400 hover:underline mt-1 inline-block"
+                            >
+                                Descargar Código Completo (.zip)
+                            </a>
+                        )}
+                    </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-white">
                         <XIcon className="w-6 h-6" />
                     </button>

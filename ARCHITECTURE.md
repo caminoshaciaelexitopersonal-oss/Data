@@ -4,65 +4,58 @@ Este documento define la arquitectura y las convenciones de nomenclatura para el
 
 ## 1. Estructura de Carpetas (Directorio Raíz)
 
-- **/backend**: Contiene toda la lógica del lado del servidor (API de FastAPI).
-- **/frontend**: Contiene toda la lógica del lado del cliente (Aplicación React).
-- **/data**: Almacena datos utilizados por la aplicación, incluyendo logs de auditoría. Es ignorado por Git.
-- **/infra**: Contiene la configuración de infraestructura como código (Docker, Kubernetes, etc.).
-- **/docs**: Almacena toda la documentación del proyecto (manuales, diagramas).
+-   `/` (Raíz): Contiene los archivos de configuración de Docker (`docker-compose.yml`), el `Dockerfile` del frontend, y los archivos fuente del frontend (`App.tsx`, `index.tsx`, `components/`).
+-   `/backend`: Contiene toda la lógica del lado del servidor (API de FastAPI, tareas de Celery, servicios, etc.).
+-   `/data`: Almacena datos utilizados por la aplicación, como los logs de auditoría. Es ignorado por Git.
+-   `/store`: Contiene la lógica de estado del frontend (Zustand).
+-   `/tests`: Contiene las pruebas de extremo a extremo (E2E) del frontend con Playwright.
 
 ## 2. Arquitectura del Backend
 
 El backend sigue una arquitectura de servicios modular.
 
-- **/backend/api**: Contendrá los endpoints de FastAPI, organizados por recurso. (Ej: `endpoints/data_sources.py`, `endpoints/analysis.py`).
-- **/backend/core**: Lógica de negocio central, incluyendo el agente de IA.
-- **/backend/llm**: Módulo para la integración con múltiples Modelos de Lenguaje Grandes (LLMs).
-- **/backend/services**: Servicios específicos como `etl_service.py`, `reporting_service.py`.
-- **/backend/models**: Definiciones de modelos de datos (Pydantic).
-- **/backend/utils**: Funciones de utilidad compartidas.
-- **/backend/tests**: Pruebas unitarias y de integración.
+-   `/backend/main.py`: Punto de entrada principal de la aplicación FastAPI. Define los endpoints y la configuración del agente.
+-   `/backend/llm`: Módulo para la integración con múltiples Modelos de Lenguaje Grandes (LLMs) a través de un router.
+-   `/backend/services`: Contiene la lógica de negocio para funcionalidades específicas como EDA y PCA.
+-   `/backend/app/services`: Contiene servicios relacionados con el ETL y la auditoría.
+-   `/backend/app/export`: Módulo para la exportación de artefactos, como el código del agente.
+-   `/backend/tests`: Pruebas unitarias y de integración del backend con Pytest.
 
 ### Convenciones de Nombres (Backend)
 
-- **Módulos**: `nombre_en_minusculas_con_guiones_bajos.py` (ej: `audit_logger.py`).
-- **Clases**: `PascalCase` (ej: `AnalysisTool`).
-- **Funciones**: `snake_case` (ej: `run_linear_regression`).
-- **Variables**: `snake_case`.
+-   **Módulos**: `nombre_en_minusculas_con_guiones_bajos.py` (ej: `audit_logger.py`).
+-   **Clases**: `PascalCase` (ej: `AnalysisTool`).
+-   **Funciones**: `snake_case` (ej: `run_linear_regression`).
+-   **Variables**: `snake_case`.
 
 ## 3. Arquitectura del Frontend
 
-El frontend seguirá una estructura basada en características (feature-based).
+El frontend sigue una estructura basada en componentes y características.
 
-- **/frontend/src/features**: Cada característica principal (ej: `chat`, `dashboard`, `data_loader`) tendrá su propio directorio.
-  - **/feature_name/components**: Componentes de React específicos de la característica.
-  - **/feature_name/hooks**: Hooks de React específicos.
-  - **/feature_name/services**: Lógica para interactuar con la API.
-  - **/feature_name/state**: Lógica de estado (reducers, slices).
-- **/frontend/src/components**: Componentes de UI compartidos y genéricos.
-- **/frontend/src/services**: Servicios globales (ej: `api_client.ts`).
-- **/frontend/src/hooks**: Hooks globales.
-- **/frontend/src/tests**: Pruebas de extremo a extremo con Playwright.
+-   `/components`: Contiene los componentes de React reutilizables (`ChatView`, `VisualAnalyticsBoard`, etc.).
+-   `/store`: Maneja el estado global de la aplicación con Zustand.
+-   `/services`: Contiene lógica para interactuar con APIs externas o realizar cálculos en el lado del cliente.
+-   `/App.tsx`: Componente principal que ensambla la aplicación.
 
 ### Convenciones de Nombres (Frontend)
 
-- **Archivos/Componentes**: `PascalCase.tsx` (ej: `ChatView.tsx`).
-- **Funciones/Hooks**: `camelCase` (ej: `useSpeechRecognition`).
-- **Variables**: `camelCase`.
-- **Estilos**: Se utilizará Tailwind CSS.
+-   **Archivos/Componentes**: `PascalCase.tsx` (ej: `ChatView.tsx`).
+-   **Funciones/Hooks**: `camelCase` (ej: `useSpeechRecognition`).
+-   **Variables**: `camelCase`.
+-   **Estilos**: Se utiliza Tailwind CSS.
 
 ## 4. Flujo de Datos del Agente
 
-1.  **Recepción**: El endpoint de la API recibe la solicitud del usuario.
-2.  **Enrutamiento LLM**: Se selecciona el LLM a través del `llm_router`.
-3.  **Planificación**: El `planner` del agente de LangChain crea un plan de ejecución.
-4.  **Ejecución**: El `executor` ejecuta las herramientas (`tools.py`) secuencialmente.
-5.  **Auditoría y Logging**: Cada paso significativo se registra.
-6.  **Respuesta**: Se ensambla la respuesta y se devuelve al cliente.
+1.  **Recepción**: El endpoint `/chat/agent` en `main.py` recibe la solicitud del usuario, que incluye la preferencia de LLM.
+2.  **Configuración Dinámica**: Se instancia el agente (`PlanAndExecute`) en tiempo real, configurándolo con el LLM seleccionado a través del `llm_router`.
+3.  **Planificación**: El `planner` del agente crea un plan de ejecución.
+4.  **Ejecución**: El `executor` ejecuta las herramientas (`@tool`) secuencialmente.
+5.  **Logging y Auditoría**: Cada paso significativo se registra en el `logger` en memoria y en el `audit_log.json`.
+6.  **Respuesta**: Se ensambla la respuesta final y se devuelve al cliente.
 
-## 5. Flujo de Ingesta y ETL Modular (Fase 2)
-1.  **Recepción**: La API en `routes_etl.py` recibe una solicitud.
-2.  **Orquestación**: `etl_service.py` genera un `job_id`.
-3.  **Tareas Asíncronas**: `celery_tasks.py` procesa cada archivo.
-4.  **Carga Modular**: Los `etl_providers` convierten archivos a DataFrames.
-5.  **Auditoría**: `audit_service.py` registra logs y guarda bloques de código.
-6.  **Unificación**: Se crea un `master_dataset.csv`.
+## 5. Flujo de Ingesta y ETL
+
+1.  **Recepción**: Endpoints como `/upload-data` o `/load-from-db` reciben los datos.
+2.  **Procesamiento**: Se utiliza `pandas` para convertir los datos a un DataFrame.
+3.  **Auditoría**: Se llama a `log_data_ingestion` para registrar el evento.
+4.  **Tareas Asíncronas**: Tareas pesadas como el procesamiento de múltiples archivos se delegan a `celery_worker.py`.

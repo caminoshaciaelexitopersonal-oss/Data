@@ -1,10 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from typing import List
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 import pandas as pd
 from celery.result import AsyncResult
 import io
 import mlflow
+import time
  
 import os
  
@@ -17,9 +18,9 @@ from pymongo import MongoClient
 from bson import ObjectId
 import json
 import boto3
+import base64
  
-from langchain.agents import AgentExecutor
-from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner
+from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner, AgentExecutor
 from langchain.tools import tool
 from langchain import hub
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -36,7 +37,11 @@ from visualizations import add_visualization, get_all_visualizations, clear_visu
  
 # --- Report Generator ---
 from report_generator import generate_report, set_summary, clear_report_artifacts
+from docx2pdf import convert
 
+# --- Custom Services ---
+from services import eda_service, pca_service
+from app.export import code_exporter
  
 from celery_worker import (
     run_kmeans_task,
@@ -238,6 +243,66 @@ model.fit(X, y)
 
     return result
 
+@tool
+def run_advanced_eda(data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Ejecuta un Análisis Exploratorio de Datos (EDA) avanzado, generando estadísticas
+    detalladas, histogramas y diagramas de caja para todas las variables numéricas.
+    """
+    code = "from services import eda_service\n\neda_results = eda_service.generate_advanced_eda(data)"
+    log_step("Ejecutando Análisis Exploratorio de Datos (EDA) avanzado", code)
+
+    eda_results = eda_service.generate_advanced_eda(data)
+
+    if eda_results.get("status") == "success":
+        # Podríamos añadir las estadísticas y gráficos al PVA si fuera necesario
+        # Por ahora, solo devolvemos el resultado al agente.
+        return eda_results
+    else:
+        return {"error": eda_results.get("message", "Error desconocido en el servicio EDA.")}
+
+@tool
+def run_pca_analysis(data: List[Dict[str, Any]], n_components: int = None) -> Dict[str, Any]:
+    """
+    Realiza un Análisis de Componentes Principales (PCA) para reducir la dimensionalidad.
+
+    :param data: La lista de datos a analizar.
+    :param n_components: El número de componentes principales a retener. Si no se especifica,
+                         se calcularán todos los componentes posibles.
+    """
+    code = f"from services import pca_service\n\npca_results = pca_service.perform_pca_analysis(data, n_components={n_components})"
+    log_step(f"Ejecutando Análisis de Componentes Principales (PCA) con {n_components or 'todos los'} componentes", code)
+
+    pca_results = pca_service.perform_pca_analysis(data, n_components)
+
+    if pca_results.get("status") == "success":
+        # Registrar el experimento en MLflow
+        mlflow.set_experiment("SADI_Dimensionality_Reduction")
+        with mlflow.start_run() as run:
+            mlflow.log_param("model", "PCA")
+            mlflow.log_param("n_components", n_components or 'all')
+            mlflow.log_metric("explained_variance_ratio_pc1", pca_results["explained_variance_ratio"][0])
+
+            # Guardar el gráfico de varianza explicada como un artefacto
+            plot_base64 = pca_results["plots"]["explained_variance_plot"]
+            plot_bytes = base64.b64decode(plot_base64)
+            plot_path = f"/tmp/{run.info.run_id}_explained_variance.png"
+            with open(plot_path, "wb") as f:
+                f.write(plot_bytes)
+            mlflow.log_artifact(plot_path, "plots")
+
+        # Enviar datos y gráficos al PVA y al generador de informes
+        add_visualization("pca_explained_variance", {
+            "components": list(range(1, len(pca_results["cumulative_explained_variance"]) + 1)),
+            "cumulative_variance": pca_results["cumulative_explained_variance"]
+        })
+        # from report_generator import add_plot # (Asegurarse de que esté importado arriba)
+        # add_plot("pca_explained_variance", io.BytesIO(plot_bytes))
+
+        return pca_results
+    else:
+        return {"error": pca_results.get("message", "Error desconocido en el servicio PCA.")}
+
  
 tools = [
     fetch_api_data,
@@ -246,7 +311,9 @@ tools = [
     generate_correlation_heatmap,
     run_linear_regression,
     run_naive_bayes_classification,
-    train_random_forest_classifier
+    train_random_forest_classifier,
+    run_advanced_eda,
+    run_pca_analysis
 ]
 
 # --- APP FASTAPI y Configuración del Agente ---
@@ -256,33 +323,45 @@ Instrumentator().instrument(app).expose(app)
 
 
 # --- Configuración del Agente y LLM ---
-# El LLM se obtiene a través del router, permitiendo flexibilidad.
-# La preferencia de modelo podría venir de la solicitud en el futuro.
-llm = get_llm_for_agent(model_preference="gemini")
-planner = load_chat_planner(llm)
-executor = load_agent_executor(llm, tools, verbose=True)
-agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
-
+# Esta sección se reconfigurará dinámicamente por solicitud en el endpoint del agente.
 
  
 # --- Endpoints ---
 @app.get("/download-report")
-def download_report():
-    """Genera y devuelve el informe analítico como un archivo .docx."""
+def download_report(format: str = Query("docx", enum=["docx", "pdf"])):
+    """
+    Genera y devuelve el informe analítico en formato .docx o .pdf.
+    """
     try:
         report_buffer = generate_report()
+        temp_docx_path = "/tmp/sadi_report.docx"
 
-        # Guardar temporalmente para poder usar FileResponse
-        temp_report_path = "/tmp/sadi_report.docx"
-        with open(temp_report_path, "wb") as f:
+        with open(temp_docx_path, "wb") as f:
             f.write(report_buffer.read())
 
-        return FileResponse(
-            path=temp_report_path,
-            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            filename='SADI_Informe_Analitico.docx'
-        )
+        if format == "pdf":
+            temp_pdf_path = "/tmp/sadi_report.pdf"
+
+            # Verificar si el archivo PDF ya existe y eliminarlo para evitar errores de sobreescritura
+            if os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
+
+            convert(temp_docx_path, temp_pdf_path)
+
+            return FileResponse(
+                path=temp_pdf_path,
+                media_type='application/pdf',
+                filename='SADI_Informe_Analitico.pdf'
+            )
+        else: # format == "docx"
+            return FileResponse(
+                path=temp_docx_path,
+                media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                filename='SADI_Informe_Analitico.docx'
+            )
     except Exception as e:
+        # Considerar un logging más robusto en producción
+        print(f"ERROR generating report: {e}")
         raise HTTPException(status_code=500, detail=f"No se pudo generar el informe: {e}")
 
 @app.post("/chat/agent/")
@@ -295,14 +374,36 @@ async def chat_agent_handler(request: ChatRequest):
 
         df = pd.DataFrame(request.data)
         data_preview = df.head().to_string() if not df.empty else "No hay datos cargados."
-        inputs = {"input": request.message + "\n\nData Preview:\n" + data_preview}
+        prompt = request.message + "\n\nData Preview:\n" + data_preview
+        inputs = {"input": prompt}
+
+        # --- Reconfiguración dinámica del Agente por solicitud ---
+        llm = get_llm_for_agent(model_preference=request.llm_preference)
+        planner = load_chat_planner(llm)
+        executor = load_agent_executor(llm, tools, verbose=True)
+        agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
+        # --- Fin de la reconfiguración ---
+
+        start_time = time.time()
 
         # Ejecutar el agente
         response = await agent_executor.ainvoke(inputs)
 
+        end_time = time.time()
+        execution_time_ms = (end_time - start_time) * 1000
+
         # Guardar la salida del agente como el resumen del informe
         output = response.get("output", "El agente no produjo una conclusión final.")
         set_summary(output)
+
+        # Log avanzado
+        log_step(
+            description="Ejecución completa del agente Plan-and-Execute",
+            code_snippet=f"agent_executor.ainvoke(message='{request.message}')",
+            llm_prompt=prompt,
+            llm_response=output,
+            execution_time_ms=execution_time_ms
+        )
 
         return {"output": output}
     except Exception as e:
@@ -330,10 +431,31 @@ def get_visualizations():
     """Endpoint para obtener los datos de todas las visualizaciones generadas."""
     return get_all_visualizations()
 
+@app.get("/audit-log")
+def get_audit_log():
+    """Endpoint para obtener el log de auditoría completo."""
+    log_file_path = os.path.join('data', 'logs', 'audit_log.json')
+    try:
+        if not os.path.exists(log_file_path):
+            return []  # Devuelve una lista vacía si el log aún no existe
+
+        with open(log_file_path, 'r') as f:
+            logs = json.load(f)
+
+        # Ordenar logs por timestamp descendente (los más recientes primero)
+        logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+        return logs
+    except (IOError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=500, detail=f"Error al leer el log de auditoría: {e}")
+
+
+from typing import Optional
 
 class ChatRequest(BaseModel):
     message: str
     data: List[Dict[str, Any]]
+    llm_preference: Optional[str] = None
 
 class PredictionRequest(BaseModel):
     run_id: str
@@ -532,3 +654,23 @@ async def upload_data(file: UploadFile = File(...), sheet_name: str = Query(None
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error processing the uploaded file: {e}")
+
+@app.get("/export/code")
+def export_code():
+    """
+    Exporta todos los pasos de código generados por el agente en un archivo .zip.
+    """
+    try:
+        steps = get_logged_steps()
+        if not steps:
+            raise HTTPException(status_code=404, detail="No se ha generado ningún código para exportar.")
+
+        zip_buffer = code_exporter.export_code_blocks_to_zip(steps)
+
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=sadi_codigo_exportado.zip"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al exportar el código: {e}")

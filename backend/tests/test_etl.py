@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
-from backend.app.services import etl_service
-from backend.app.etl_providers import loader_jsonl, loader_tsv
+from ..app.services import etl_service
+from ..app.etl_providers import loader_jsonl, loader_tsv
 
 @patch('backend.app.services.audit_service.write_audit_log')
 def test_orchestrate_etl_calls_audit_service(mock_write_audit_log):
