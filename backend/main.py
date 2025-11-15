@@ -20,8 +20,7 @@ import json
 import boto3
 import base64
  
-from langchain.agents import AgentExecutor
-from langchain_experimental.plan_and_execute import PlanAndExecute, load_agent_executor, load_chat_planner
+from langchain.agents import initialize_agent, AgentType
 from langchain.tools import tool
 from langchain import hub
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -544,15 +543,18 @@ async def chat_agent_handler(request: ChatRequest):
 
         # --- Reconfiguración dinámica del Agente por solicitud ---
         llm = get_llm_for_agent(model_preference=request.llm_preference)
-        planner = load_chat_planner(llm)
-        executor = load_agent_executor(llm, tools, verbose=True)
-        agent_executor = PlanAndExecute(planner=planner, executor=executor, verbose=True)
+        agent = initialize_agent(
+            tools,
+            llm,
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True
+        )
         # --- Fin de la reconfiguración ---
 
         start_time = time.time()
 
         # Ejecutar el agente
-        response = await agent_executor.ainvoke(inputs)
+        response = await agent.ainvoke(inputs)
 
         end_time = time.time()
         execution_time_ms = (end_time - start_time) * 1000
