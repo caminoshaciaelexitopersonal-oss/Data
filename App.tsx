@@ -42,6 +42,7 @@ const App: React.FC = () => {
     const [isCodeViewerModalOpen, setIsCodeViewerModalOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
 
     const [sheetModalState, setSheetModalState] = useState<{ isOpen: boolean; file: File | null; sheetNames: string[] }>({
         isOpen: false,
@@ -218,7 +219,11 @@ const App: React.FC = () => {
             const response = await fetch(`${API_BASE_URL}/chat/agent/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, data: state.processedData }),
+                body: JSON.stringify({
+                    message: message,
+                    data: state.processedData,
+                    llm_preference: llmPreference
+                }),
             });
             if (!response.ok) throw new Error((await response.json()).detail);
             const agentResponse = await response.json();
@@ -244,6 +249,19 @@ const App: React.FC = () => {
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h1 className="text-xl font-bold">Sistema de Analítica de Datos Inteligente (SADI)</h1>
                 <div className="flex items-center gap-4">
+                    <div>
+                        <label htmlFor="llm-select" className="text-xs text-slate-400 mr-2">Motor IA:</label>
+                        <select
+                            id="llm-select"
+                            value={llmPreference}
+                            onChange={(e) => setLlmPreference(e.target.value as any)}
+                            className="bg-gray-700 border border-gray-600 rounded-md text-sm py-1 px-2"
+                        >
+                            <option value="gemini">Gemini</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="ollama">Ollama</option>
+                        </select>
+                    </div>
                     <button
                         onClick={() => setCurrentView(currentView === 'chat' ? 'dashboard' : 'chat')}
                         className="bg-purple-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"

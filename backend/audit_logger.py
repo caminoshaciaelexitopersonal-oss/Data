@@ -51,17 +51,31 @@ def log_data_ingestion(
     }
 
     try:
-        # Read existing logs and append the new one to ensure a valid JSON list
         logs = []
         if os.path.exists(LOG_FILE_PATH) and os.path.getsize(LOG_FILE_PATH) > 0:
-            with open(LOG_FILE_PATH, 'r') as f:
-                logs = json.load(f)
+            try:
+                with open(LOG_FILE_PATH, 'r') as f:
+                    content = f.read()
+                    if content.strip():
+                        logs = json.loads(content)
+                    else:
+                        logs = []
+
+                if not isinstance(logs, list):
+                    raise json.JSONDecodeError("Log file does not contain a JSON list.", content, 0)
+
+            except json.JSONDecodeError as e:
+                print(f"Audit log file at '{LOG_FILE_PATH}' is corrupted. Backing it up. Error: {e}")
+                backup_path = LOG_FILE_PATH + '.bak'
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+                os.rename(LOG_FILE_PATH, backup_path)
+                logs = []
 
         logs.append(log_entry)
 
         with open(LOG_FILE_PATH, 'w') as f:
             json.dump(logs, f, indent=4)
 
-    except (IOError, json.JSONDecodeError) as e:
-        # In a real system, this should go to a more robust logging system (e.g., ELK stack)
+    except IOError as e:
         print(f"Error writing to audit log: {e}")
