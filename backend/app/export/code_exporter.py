@@ -44,3 +44,32 @@ def export_code_blocks_to_zip(steps: List[Dict[str, Any]]) -> io.BytesIO:
     # Rebobinar el buffer para que pueda ser leído desde el principio
     zip_buffer.seek(0)
     return zip_buffer
+
+
+import nbformat
+from nbformat.v4 import new_notebook, new_markdown_cell, new_code_cell
+
+def export_analysis_to_notebook(steps: List[Dict[str, Any]]) -> str:
+    """
+    Convierte una lista de pasos de análisis en un notebook de Jupyter (.ipynb).
+    """
+    nb = new_notebook()
+
+    # Celda de título
+    nb.cells.append(new_markdown_cell(
+        "# Análisis de Datos con SADI\n\n"
+        "Este notebook fue generado automáticamente por el Sistema de Analítica de Datos Inteligente (SADI)."
+    ))
+
+    for i, step in enumerate(steps):
+        description = step.get("descripcion", "Sin descripción.")
+        code = step.get("codigo", None)
+
+        # Añadir la descripción como una celda de Markdown
+        nb.cells.append(new_markdown_cell(f"### Paso {i+1}: {description}"))
+
+        # Añadir el código como una celda de código, si existe
+        if code and code.strip():
+            nb.cells.append(new_code_cell(code))
+
+    return nbformat.writes(nb)

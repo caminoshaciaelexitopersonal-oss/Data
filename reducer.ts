@@ -74,6 +74,9 @@ export const reducer = (state: State, action: Action): State => {
         isLoading: false,
       };
 
+    case 'SET_DATA_HEALTH_REPORT':
+      return { ...state, healthReport: action.payload.healthReport };
+
     case 'SET_PROCESSED_DATA':
       return {
         ...state,

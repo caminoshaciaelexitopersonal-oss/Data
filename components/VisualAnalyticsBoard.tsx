@@ -4,7 +4,13 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer
 } from "recharts";
 import { motion } from "framer-motion";
+import { Responsive, WidthProvider } from "react-grid-layout";
+import html2canvas from 'html2canvas';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { useDashboardStore } from "../store/dashboardStore"; // Ajusta la ruta si es necesario
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -42,7 +48,19 @@ const renderChart = (type: string, data: any) => {
 
 
 export const VisualAnalyticsBoard: React.FC = () => {
-    const { visualizations, loading, error, selectedCharts, fetchVisualizations, toggleChartSelection } = useDashboardStore();
+    const dashboardRef = React.useRef<HTMLDivElement>(null);
+    const { filteredVisualizations, loading, error, selectedCharts, fetchVisualizations, toggleChartSelection, setFilter } = useDashboardStore();
+
+    const handleDownloadImage = () => {
+        if (dashboardRef.current) {
+            html2canvas(dashboardRef.current).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'sadi_dashboard.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    };
 
     useEffect(() => {
         fetchVisualizations();
@@ -50,12 +68,12 @@ export const VisualAnalyticsBoard: React.FC = () => {
 
     if (loading) return <p className="p-8 text-white">Cargando visualizaciones...</p>;
     if (error) return <p className="p-8 text-red-400">Error: {error}</p>;
-    if (!visualizations || Object.keys(visualizations).length === 0) return <p className="p-8 text-white">No hay datos de visualización disponibles.</p>;
+    if (!filteredVisualizations || Object.keys(filteredVisualizations).length === 0) return <p className="p-8 text-white">No hay datos de visualización disponibles.</p>;
 
-    const availableCharts = Object.keys(visualizations);
+    const availableCharts = Object.keys(filteredVisualizations);
 
     return (
-        <div className="p-8 space-y-10 bg-gray-900 text-white min-h-full overflow-y-auto">
+        <div className="p-8 space-y-10 bg-gray-900 text-white min-h-full overflow-y-auto" ref={dashboardRef}>
             <header>
                 <h1 className="text-3xl font-bold">Panel de Visualización Avanzado</h1>
                 <p className="text-slate-300">Seleccione las visualizaciones que desea mostrar en el panel.</p>
@@ -81,25 +99,54 @@ export const VisualAnalyticsBoard: React.FC = () => {
                 </div>
             </div>
 
+            {/* --- Panel de Filtros --- */}
+            <div className="bg-gray-800 p-4 rounded-xl shadow-lg">
+                <h2 className="text-lg font-semibold mb-3">Filtros Globales</h2>
+                <div>
+                    <label htmlFor="model-filter" className="text-sm text-slate-300">Filtrar por Modelo:</label>
+                    <select
+                        id="model-filter"
+                        onChange={(e) => setFilter('classification_model', e.target.value || null)}
+                        className="bg-gray-700 ml-2 rounded p-1 text-sm"
+                    >
+                        <option value="">Todos</option>
+                        {/* Esto debería ser dinámico */}
+                        <option value="Random Forest">Random Forest</option>
+                        <option value="SVM">SVM</option>
+                        <option value="Árbol de Decisión">Árbol de Decisión</option>
+                        <option value="Red Neuronal (MLP)">Red Neuronal (MLP)</option>
+                    </select>
+                </div>
+            </div>
+
             {/* --- Renderización de Gráficos Seleccionados --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ResponsiveGridLayout
+                className="layout"
+                layouts={{ lg: selectedCharts.map((key, i) => ({ i: key, x: (i % 2) * 6, y: Math.floor(i / 2) * 4, w: 6, h: 4 })) }}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                rowHeight={100}
+            >
                 {selectedCharts.map(chartKey => (
-                    <motion.div key={chartKey} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg h-[450px]">
+                    <div key={chartKey} className="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                             <h2 className="text-xl font-semibold mb-4 capitalize">{chartKey.replace(/_/g, ' ')}</h2>
                             <ResponsiveContainer width="100%" height="90%">
-                                {renderChart(chartKey, (visualizations as any)[chartKey])}
+                                {renderChart(chartKey, (filteredVisualizations as any)[chartKey])}
                             </ResponsiveContainer>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 ))}
-                 {selectedCharts.length === 0 && (
-                    <p className="text-slate-400 col-span-full text-center">Seleccione al menos un gráfico para visualizar.</p>
-                )}
-            </div>
+            </ResponsiveGridLayout>
+
+            {selectedCharts.length === 0 && (
+                <p className="text-slate-400 col-span-full text-center py-10">Seleccione al menos un gráfico para visualizar.</p>
+            )}
 
             {/* --- Botones de Acción --- */}
             <div className="text-center mt-10 flex justify-center gap-4">
+                 <button onClick={handleDownloadImage} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">Descargar como Imagen</button>
+                 <a href={`${API_BASE_URL}/export/notebook`} className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Descargar Notebook (.ipynb)</a>
                  <a href={`${API_BASE_URL}/download-report?format=docx`} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Descargar Informe (.docx)</a>
                  <a href={`${API_BASE_URL}/download-report?format=pdf`} className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Descargar Informe (.pdf)</a>
             </div>

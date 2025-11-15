@@ -6,7 +6,6 @@ import { DataSourceModal } from './components/DataSourceModal';
 import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard'; // Importar PVA
 import { CodeIcon, ChartIcon } from './components/icons'; // Importar ChartIcon
-import { analyzeDataQuality, detectOutliers } from './services/dataService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -54,6 +53,26 @@ const App: React.FC = () => {
         // (lógica de notificación)
     };
 
+    const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/data-health-report/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data }),
+            });
+            if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
+
+            const healthReport = await response.json();
+
+            // Aquí asumimos que el reducer puede manejar esta nueva acción
+            dispatch({ type: 'SET_DATA_HEALTH_REPORT', payload: { healthReport } });
+            addNotification(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
+
+        } catch (error) {
+            addNotification(`Error al generar el informe de salud: ${(error as Error).message}`, 'error');
+        }
+    };
+
     const handleExcelFileLoad = async (file: File) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Procesando archivo Excel...' } });
         const formData = new FormData();
@@ -68,10 +87,9 @@ const App: React.FC = () => {
             if (sheet_names && sheet_names.length > 1) {
                 setSheetModalState({ isOpen: true, file, sheetNames: sheet_names });
             } else {
-                const qualityReport = analyzeDataQuality(data);
-                const outlierReport = detectOutliers(data, qualityReport);
-                dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport, outlierReport } });
+                dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
                 addNotification(`Archivo '${filename}' cargado correctamente.`, 'success');
+                fetchAndSetDataHealthReport(data, filename); // Nueva llamada
             }
         } catch (error) {
             addNotification(`Error al cargar el archivo Excel: ${(error as Error).message}`, 'error');
@@ -91,11 +109,10 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
 
             const { data } = await response.json();
-            const qualityReport = analyzeDataQuality(data);
-            const outlierReport = detectOutliers(data, qualityReport);
-
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: `MongoDB: ${db}/${collection}`, qualityReport, outlierReport } });
+            const fileName = `MongoDB: ${db}/${collection}`;
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
             addNotification(`Datos cargados desde MongoDB correctamente.`, 'success');
+            fetchAndSetDataHealthReport(data, fileName);
         } catch (error) {
             addNotification(`Error de conexión con MongoDB: ${(error as Error).message}`, 'error');
         } finally {
@@ -114,11 +131,10 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
 
             const { data, sheet_names } = await response.json();
-            const qualityReport = analyzeDataQuality(data);
-            const outlierReport = detectOutliers(data, qualityReport);
-
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: `S3: ${bucket}/${key}`, qualityReport, outlierReport } });
+            const fileName = `S3: ${bucket}/${key}`;
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
             addNotification(`Datos cargados desde S3 correctamente.`, 'success');
+            fetchAndSetDataHealthReport(data, fileName);
         } catch (error) {
             addNotification(`Error de conexión con S3: ${(error as Error).message}`, 'error');
         } finally {
@@ -142,11 +158,10 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
 
             const { filename, data } = await response.json();
-            const qualityReport = analyzeDataQuality(data);
-            const outlierReport = detectOutliers(data, qualityReport);
-
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: `${filename} (${sheetName})`, qualityReport, outlierReport } });
+            const fullFileName = `${filename} (${sheetName})`;
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: fullFileName, qualityReport: {}, outlierReport: {} } });
             addNotification(`Hoja '${sheetName}' cargada correctamente.`, 'success');
+            fetchAndSetDataHealthReport(data, fullFileName);
         } catch (error) {
             addNotification(`Error al cargar la hoja de cálculo: ${(error as Error).message}`, 'error');
         } finally {
@@ -163,11 +178,10 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
             
             const { filename, data } = await response.json();
-            const qualityReport = analyzeDataQuality(data);
-            const outlierReport = detectOutliers(data, qualityReport);
 
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport, outlierReport } });
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
             addNotification(`Archivo '${filename}' cargado.`, 'success');
+            fetchAndSetDataHealthReport(data, filename);
             return `Archivo ${filename} cargado con ${data.length} filas.`;
         } catch (error) {
             addNotification(`Error al cargar el archivo: ${(error as Error).message}`, 'error');
@@ -188,11 +202,10 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
 
             const { data } = await response.json();
-            const qualityReport = analyzeDataQuality(data);
-            const outlierReport = detectOutliers(data, qualityReport);
-
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: `Consulta: ${query.substring(0, 30)}...`, qualityReport, outlierReport } });
+            const fileName = `Consulta: ${query.substring(0, 30)}...`;
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
             addNotification(`Datos cargados desde la base de datos.`, 'success');
+            fetchAndSetDataHealthReport(data, fileName);
             return `Datos cargados desde la base de datos con ${data.length} filas.`;
         } catch (error) {
             addNotification(`Error de conexión con la base de datos: ${(error as Error).message}`, 'error');
