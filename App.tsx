@@ -1,6 +1,6 @@
 import React, { useReducer, useState } from 'react';
 import { initialState, reducer } from './reducer';
-import { Notification } from './types';
+import { ToastMessage } from './components/Toast';
 import { ChatView } from './components/ChatView';
 import { DataSourceModal } from './components/DataSourceModal';
 import { CodeViewerModal } from './components/CodeViewerModal';
@@ -35,12 +35,14 @@ const SheetSelectionModal: React.FC<{
 );
 
 
+import { ToastContainer } from './components/Toast';
+
 const App: React.FC = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [isDataSourceModalOpen, setIsDataSourceModalOpen] = useState(false);
     const [isCodeViewerModalOpen, setIsCodeViewerModalOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
 
     const [sheetModalState, setSheetModalState] = useState<{ isOpen: boolean; file: File | null; sheetNames: string[] }>({
@@ -49,8 +51,46 @@ const App: React.FC = () => {
         sheetNames: [],
     });
 
-    const addNotification = (message: string, type: 'success' | 'error' | 'info') => {
-        // (lógica de notificación)
+    const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+        const newToast: ToastMessage = {
+            id: Date.now(),
+            message,
+            type,
+        };
+        setToasts(prevToasts => [...prevToasts, newToast]);
+    };
+
+    const dismissToast = (id: number) => {
+        setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+    };
+
+    const pollTaskStatus = (taskId: string) => {
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/etl/status/${taskId}`);
+                if (!response.ok) {
+                    // Stop polling on server error, but don't clear the toast
+                    // as it might contain the initial "in progress" message.
+                    clearInterval(interval);
+                    return;
+                }
+                const result = await response.json();
+
+                if (result.status === 'SUCCESS') {
+                    clearInterval(interval);
+                    addToast('El procesamiento de archivos ha finalizado con éxito.', 'success');
+                    // Aquí podrías despachar una acción para actualizar los datos si es necesario
+                } else if (result.status === 'FAILURE') {
+                    clearInterval(interval);
+                    addToast(`El procesamiento de archivos ha fallado: ${result.result}`, 'error');
+                }
+                // Si el estado es PENDING o RUNNING, no hacemos nada y seguimos sondeando.
+
+            } catch (error) {
+                clearInterval(interval);
+                addToast('No se pudo verificar el estado de la tarea.', 'error');
+            }
+        }, 5000); // Sondear cada 5 segundos
     };
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
@@ -66,10 +106,10 @@ const App: React.FC = () => {
 
             // Aquí asumimos que el reducer puede manejar esta nueva acción
             dispatch({ type: 'SET_DATA_HEALTH_REPORT', payload: { healthReport } });
-            addNotification(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
+            addToast(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
 
         } catch (error) {
-            addNotification(`Error al generar el informe de salud: ${(error as Error).message}`, 'error');
+            addToast(`Error al generar el informe de salud: ${(error as Error).message}`, 'error');
         }
     };
 
@@ -88,11 +128,11 @@ const App: React.FC = () => {
                 setSheetModalState({ isOpen: true, file, sheetNames: sheet_names });
             } else {
                 dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
-                addNotification(`Archivo '${filename}' cargado correctamente.`, 'success');
+                addToast(`Archivo '${filename}' cargado correctamente.`, 'success');
                 fetchAndSetDataHealthReport(data, filename); // Nueva llamada
             }
         } catch (error) {
-            addNotification(`Error al cargar el archivo Excel: ${(error as Error).message}`, 'error');
+            addToast(`Error al cargar el archivo Excel: ${(error as Error).message}`, 'error');
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
@@ -111,10 +151,10 @@ const App: React.FC = () => {
             const { data } = await response.json();
             const fileName = `MongoDB: ${db}/${collection}`;
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addNotification(`Datos cargados desde MongoDB correctamente.`, 'success');
+            addToast(`Datos cargados desde MongoDB correctamente.`, 'success');
             fetchAndSetDataHealthReport(data, fileName);
         } catch (error) {
-            addNotification(`Error de conexión con MongoDB: ${(error as Error).message}`, 'error');
+            addToast(`Error de conexión con MongoDB: ${(error as Error).message}`, 'error');
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
@@ -133,10 +173,10 @@ const App: React.FC = () => {
             const { data, sheet_names } = await response.json();
             const fileName = `S3: ${bucket}/${key}`;
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addNotification(`Datos cargados desde S3 correctamente.`, 'success');
+            addToast(`Datos cargados desde S3 correctamente.`, 'success');
             fetchAndSetDataHealthReport(data, fileName);
         } catch (error) {
-            addNotification(`Error de conexión con S3: ${(error as Error).message}`, 'error');
+            addToast(`Error de conexión con S3: ${(error as Error).message}`, 'error');
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
@@ -160,10 +200,10 @@ const App: React.FC = () => {
             const { filename, data } = await response.json();
             const fullFileName = `${filename} (${sheetName})`;
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: fullFileName, qualityReport: {}, outlierReport: {} } });
-            addNotification(`Hoja '${sheetName}' cargada correctamente.`, 'success');
+            addToast(`Hoja '${sheetName}' cargada correctamente.`, 'success');
             fetchAndSetDataHealthReport(data, fullFileName);
         } catch (error) {
-            addNotification(`Error al cargar la hoja de cálculo: ${(error as Error).message}`, 'error');
+            addToast(`Error al cargar la hoja de cálculo: ${(error as Error).message}`, 'error');
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
@@ -180,11 +220,11 @@ const App: React.FC = () => {
             const { filename, data } = await response.json();
 
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
-            addNotification(`Archivo '${filename}' cargado.`, 'success');
+            addToast(`Archivo '${filename}' cargado.`, 'success');
             fetchAndSetDataHealthReport(data, filename);
             return `Archivo ${filename} cargado con ${data.length} filas.`;
         } catch (error) {
-            addNotification(`Error al cargar el archivo: ${(error as Error).message}`, 'error');
+            addToast(`Error al cargar el archivo: ${(error as Error).message}`, 'error');
             throw error;
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
@@ -204,11 +244,11 @@ const App: React.FC = () => {
             const { data } = await response.json();
             const fileName = `Consulta: ${query.substring(0, 30)}...`;
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addNotification(`Datos cargados desde la base de datos.`, 'success');
+            addToast(`Datos cargados desde la base de datos.`, 'success');
             fetchAndSetDataHealthReport(data, fileName);
             return `Datos cargados desde la base de datos con ${data.length} filas.`;
         } catch (error) {
-            addNotification(`Error de conexión con la base de datos: ${(error as Error).message}`, 'error');
+            addToast(`Error de conexión con la base de datos: ${(error as Error).message}`, 'error');
             throw error;
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
@@ -253,10 +293,35 @@ const App: React.FC = () => {
         }
     };
 
+    const handleMultiFileLoad = async (files: FileList) => {
+        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Subiendo archivos...' } });
+        const formData = new FormData();
+        Array.from(files).forEach(file => {
+            formData.append('files', file);
+        });
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/upload/multi`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) throw new Error((await response.json()).detail);
+
+            const { task_id, message } = await response.json();
+            addToast(message, 'info');
+            pollTaskStatus(task_id); // Iniciar el sondeo
+
+        } catch (error) {
+            addToast(`Error al subir los archivos: ${(error as Error).message}`, 'error');
+        } finally {
+            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
+        }
+    };
+
     return (
         <div className="bg-gray-900 text-slate-200 h-screen font-sans flex flex-col">
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
-            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onMongoDbConnect={(uri, db, collection) => { handleMongoDbConnect(uri, db, collection); setIsDataSourceModalOpen(false); }} onS3Connect={(bucket, key) => { handleS3Connect(bucket, key); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
+            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onMongoDbConnect={(uri, db, collection) => { handleMongoDbConnect(uri, db, collection); setIsDataSourceModalOpen(false); }} onS3Connect={(bucket, key) => { handleS3Connect(bucket, key); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
             {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} /> )}
 
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
@@ -298,6 +363,7 @@ const App: React.FC = () => {
                     <VisualAnalyticsBoard />
                 )}
             </main>
+            <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 };

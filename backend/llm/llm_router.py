@@ -31,7 +31,7 @@ def _get_ollama_client(model: str = "llama3") -> Ollama:
     """Initializes and returns the Ollama client."""
     # Note: This assumes the Ollama service is reachable.
     # A real implementation should have a health check.
-    return Ollama(base_url=OLLAMA_BASE_URL, model=model)
+    return Ollama(base_url=OLLAMA_BASE_URL, model=model, temperature=0)
 
 # --- Task-Based Model Selection ---
 TASK_TO_MODEL_MAP = {

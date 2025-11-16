@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 import base64
-from report_generator import add_plot # Importar
+from backend.report_generator import add_plot # Importar
 
 plt.switch_backend('Agg')
 
