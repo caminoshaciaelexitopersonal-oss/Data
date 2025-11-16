@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircleIcon, XCircleIcon, InformationCircleIcon } from './icons'; // Suponiendo que tienes estos iconos
+// import { CheckCircleIcon, XCircleIcon, InformationCircleIcon } from './icons'; // Suponiendo que tienes estos iconos
 
 export interface ToastMessage {
   id: number;
@@ -25,11 +25,11 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
     };
   }, [toast, onDismiss]);
 
-  const icons = {
-    success: <CheckCircleIcon className="w-6 h-6 text-green-500" />,
-    error: <XCircleIcon className="w-6 h-6 text-red-500" />,
-    info: <InformationCircleIcon className="w-6 h-6 text-blue-500" />,
-  };
+  // const icons = {
+  //   success: <CheckCircleIcon className="w-6 h-6 text-green-500" />,
+  //   error: <XCircleIcon className="w-6 h-6 text-red-500" />,
+  //   info: <InformationCircleIcon className="w-6 h-6 text-blue-500" />,
+  // };
 
   return (
     <motion.div
@@ -39,7 +39,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
       exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
       className={`flex items-center p-4 mb-4 text-white rounded-lg shadow-lg bg-gray-800 border border-gray-700`}
     >
-      <div className="mr-3">{icons[toast.type]}</div>
+      {/* <div className="mr-3">{icons[toast.type]}</div> */}
       <div className="text-sm font-medium">{toast.message}</div>
       <button onClick={() => onDismiss(toast.id)} className="ml-auto -mx-1.5 -my-1.5 p-1.5 rounded-lg hover:bg-gray-700">
         <span className="sr-only">Dismiss</span>

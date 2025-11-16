@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from backend.celery_app import create_celery_app
 from typing import List, Dict, Any
 import pandas as pd
