@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import os
 
-from ..llm import llm_router
+from backend.llm import llm_router
 
 # --- Fixtures y Mocks ---
 
@@ -16,9 +16,9 @@ def mock_env_vars(monkeypatch):
 @pytest.fixture
 def mock_llm_clients():
     """Fixture para mockear los clientes de LLM y sus respuestas."""
-    with patch('llm.llm_router._get_gemini_client') as mock_gemini, \
-         patch('llm.llm_router._get_openai_client') as mock_openai, \
-         patch('llm.llm_router._get_ollama_client') as mock_ollama:
+    with patch('backend.llm.llm_router._get_gemini_client') as mock_gemini, \
+         patch('backend.llm.llm_router._get_openai_client') as mock_openai, \
+         patch('backend.llm.llm_router._get_ollama_client') as mock_ollama:
 
         # Configurar mocks para que devuelvan un cliente mockeado
         mock_gemini.return_value = MagicMock()

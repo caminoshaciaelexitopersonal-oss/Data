@@ -49,13 +49,14 @@ services:
     image: python:3.11-slim
     command: >
       sh -c "pip install mlflow psycopg2-binary &&
+             mkdir -p /data/mlruns /data/artifacts &&
              mlflow server --host 0.0.0.0 --port 5000
-             --backend-store-uri sqlite:////mlflow/mlflow.db
-             --default-artifact-root file:/mlflow/artifacts"
+             --backend-store-uri sqlite:////data/mlruns/mlflow.db
+             --default-artifact-root file:/data/artifacts"
     ports:
       - "5000:5000"
     volumes:
-      - mlflow_data:/mlflow
+      - mlflow_data:/data
 
   prometheus:
     image: prom/prometheus

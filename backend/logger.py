@@ -1,37 +1,81 @@
 # backend/logger.py
+import logging
+import json
 from typing import List, Dict, Any
-
-# Esta lista actuará como nuestro registro en memoria.
-# En una aplicación de producción más avanzada, esto podría ser reemplazado
-# por un sistema de registro más robusto (ej. escribir en un archivo, una base de datos, o un servicio como Loki).
-executed_steps: List[Dict[str, Any]] = []
-
 from datetime import datetime
-import time
+
+# --- Structured Logger Setup ---
+
+class JsonFormatter(logging.Formatter):
+    """
+    Custom formatter to output logs in JSON format.
+    """
+    def format(self, record: logging.LogRecord) -> str:
+        log_record = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "name": record.name,
+        }
+        # Add extra fields if they exist
+        if hasattr(record, 'extra_data'):
+            log_record.update(record.extra_data)
+
+        # Add exception info if it exists
+        if record.exc_info:
+            log_record['exc_info'] = self.formatException(record.exc_info)
+
+        return json.dumps(log_record)
+
+def setup_logger() -> logging.Logger:
+    """
+    Sets up a logger that outputs structured JSON.
+    """
+    logger = logging.getLogger("sadi_logger")
+    logger.setLevel(logging.INFO)
+
+    # Prevents adding handlers multiple times
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = JsonFormatter()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    return logger
+
+# Initialize the logger
+logger = setup_logger()
+
+
+# --- In-memory step tracking for SADI Code Viewer ---
+# This list remains to support the frontend's "View Code" feature.
+executed_steps: List[Dict[str, Any]] = []
 
 def log_step(
     description: str,
-    code_snippet: str,
+    code: str,
     llm_prompt: str = None,
     llm_response: str = None,
     execution_time_ms: float = None
 ):
     """
-    Registra un paso de ejecución en el log en memoria, incluyendo detalles del LLM y tiempo.
-
-    :param description: Descripción en lenguaje natural del paso.
-    :param code_snippet: Fragmento de código Python ejecutado.
-    :param llm_prompt: El prompt enviado al LLM para este paso (opcional).
-    :param llm_response: La respuesta recibida del LLM (opcional).
-    :param execution_time_ms: Tiempo de ejecución del paso en milisegundos (opcional).
+    Records an execution step for the SADI Code Viewer and also logs the event
+    to the structured logger.
     """
     timestamp = datetime.utcnow().isoformat()
-    print(f"Logging step: {description}")
 
+    # Log the event using the structured logger
+    logger.info("Executing agent step", extra={'extra_data': {
+        "event_type": "agent_step",
+        "step_description": description,
+        "execution_time_ms": execution_time_ms,
+    }})
+
+    # Keep the original functionality for the frontend Code Viewer
     log_entry = {
+        "description": description,
+        "codigo": code,
         "timestamp": timestamp,
-        "descripcion": description,
-        "codigo": code_snippet,
         "llm_prompt": llm_prompt,
         "llm_response": llm_response,
         "execution_time_ms": execution_time_ms
@@ -40,13 +84,13 @@ def log_step(
 
 def get_logged_steps() -> List[Dict[str, Any]]:
     """
-    Devuelve todos los pasos que han sido registrados.
+    Returns all the steps that have been recorded for the SADI Code Viewer.
     """
     return executed_steps
 
 def clear_log():
     """
-    Limpia el log de pasos. Esto debería llamarse al inicio de una nueva ejecución del agente.
+    Clears the in-memory log of steps for the SADI Code Viewer.
     """
-    print("Clearing execution log.")
+    logger.info("Clearing execution step log for new agent run.", extra={'extra_data': {"event_type": "log_clear"}})
     executed_steps.clear()
