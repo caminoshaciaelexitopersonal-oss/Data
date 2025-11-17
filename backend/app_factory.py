@@ -35,6 +35,7 @@ def create_app():
     from backend.wpa.report_generation import api as wpa_report_generation_api
     from backend.wpa.db_ingestion import api as wpa_db_ingestion_api
     from backend.wpa.intelligent_merge import api as wpa_intelligent_merge_api
+    from backend.routers.pipelines_api import router as pipelines_router
  
 
     # --- New MCP Router ---
@@ -57,6 +58,7 @@ def create_app():
     app.include_router(wpa_report_generation_api.router)
     app.include_router(wpa_db_ingestion_api.router)
     app.include_router(wpa_intelligent_merge_api.router)
+    app.include_router(pipelines_router)
 
  
     # --- Legacy Routers (to be phased out) ---

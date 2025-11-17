@@ -7,6 +7,8 @@ import io
 from backend.logger import get_logged_steps, log_step
 from backend.visualizations import get_all_visualizations
 from backend.report_generator import generate_report
+import pandas as pd
+from backend.agent.pre_analysis import detect_intent
 from backend.schemas import ChatRequest
 from fastapi import Request
 
@@ -42,25 +44,23 @@ async def chat_agent(
     tracer_service: PromptTracerService = Depends(get_prompt_tracer_service)
 ):
     try:
-        # Assume a session_id is passed in the request, or generate one.
-        session_id = str(getattr(request, 'session_id', uuid4()))
-        start_time = time.time()
+ 
+        # 1. Crear un DataFrame de muestra para el pre-análisis
+        df_sample = pd.DataFrame(request.data)
 
-        result = await agent_executor.ainvoke({"input": request.message, "data": request.data})
+        # 2. Ejecutar el pre-análisis inteligente
+        analysis = detect_intent(request.message, df_sample)
 
-        end_time = time.time()
-        execution_time = end_time - start_time
-
-        # Determine model used (this might need to be sourced from the agent's config)
-        model_used = "default_model"
-
-        tracer_service.log_prompt(
-            session_id=session_id,
-            prompt=request.message,
-            response=result,
-            model_used=model_used,
-            execution_time=execution_time
+        # 3. Enriquecer el input del agente con el contexto del pre-análisis
+        enriched_input = (
+            f"User Query: \"{request.message}\"\n"
+            f"Pre-analysis Intent: {analysis['intent']}\n"
+            f"Dataset Context: {analysis['context']}"
         )
+
+        # 4. Invocar al agente con el input enriquecido
+        result = await agent_executor.ainvoke({"input": enriched_input, "data": request.data})
+ 
 
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
