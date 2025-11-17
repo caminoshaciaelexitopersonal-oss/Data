@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from backend.app_factory import create_app
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain import hub
