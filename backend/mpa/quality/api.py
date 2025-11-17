@@ -1,0 +1,27 @@
+
+from fastapi import APIRouter, Depends, HTTPException, Body
+from typing import List, Dict, Any
+import pandas as pd
+
+from backend.services.data_quality_service import DataQualityService, get_data_quality_service
+
+router = APIRouter(prefix="/mpa/quality", tags=["MPA - Data Quality"])
+
+@router.post("/report", response_model=Dict[str, Any])
+def get_quality_report(
+    data: List[Dict[str, Any]] = Body(...),
+    service: DataQualityService = Depends(get_data_quality_service)
+):
+    """
+    Generates a comprehensive data quality report for the provided dataset.
+    """
+    if not data:
+        raise HTTPException(status_code=400, detail="No data provided.")
+
+    try:
+        df = pd.DataFrame(data)
+        report = service.get_quality_report(df)
+        return report
+    except Exception as e:
+        # It's good practice to log the exception here
+        raise HTTPException(status_code=500, detail=f"An error occurred while generating the quality report: {e}")
