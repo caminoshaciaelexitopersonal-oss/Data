@@ -25,8 +25,32 @@ if not logger.handlers:
 
 class IntelligentMergeService:
     # ... (Constants)
-    LEVENSHTEIN_THRESHOLD = 80 # Lowered slightly for flexibility
+    LEVENSHTEIN_THRESHOLD = 80 # This will be replaced by a weighted score threshold
+    SIMILARITY_THRESHOLD = 0.55 # Adjusted threshold
     HIGH_NULL_THRESHOLD = 0.7
+
+    # Semantic synonym groups for column name matching
+    SYNONYM_GROUPS = [
+        {'id', 'identifier', 'key', 'code', 'number', 'numero', 'codigo'},
+        {'customer', 'client', 'user', 'patron', 'cliente', 'usuario'},
+        {'name', 'fullname', 'nombre', 'nombre_completo', 'full_name'},
+        {'firstname', 'givenname', 'fname', 'primer_nombre'},
+        {'lastname', 'surname', 'lname', 'apellido'},
+        {'email', 'emailaddress', 'mail', 'correo'},
+        {'phone', 'phonenumber', 'telephone', 'telefono'},
+        {'address', 'location', 'street', 'direccion'},
+        {'city', 'town', 'municipality', 'ciudad'},
+        {'state', 'province', 'region', 'estado', 'provincia'},
+        {'zip', 'zipcode', 'postalcode', 'codigo_postal'},
+        {'country', 'nation', 'pais'},
+        {'date', 'timestamp', 'time', 'fecha'},
+        {'amount', 'value', 'price', 'total', 'monto', 'valor', 'precio'},
+        {'quantity', 'qty', 'count', 'cantidad'},
+    ]
+
+    def __init__(self):
+        # Normalize the synonym map for efficient lookup
+        self.SYNONYM_MAP = {self._normalize_string(word): i for i, group in enumerate(self.SYNONYM_GROUPS) for word in group}
 
     def _normalize_string(self, s: str) -> str:
         if not isinstance(s, str): return ""
@@ -49,68 +73,157 @@ class IntelligentMergeService:
         except (ValueError, TypeError): pass
         return "string"
 
+    def _calculate_similarity_score(self, col1_norm: str, col2_norm: str, dtype1: str, dtype2: str) -> float:
+        """Calculates a weighted similarity score between two columns."""
+        # 1. Levenshtein (WRatio) - Weight: 0.5
+        lev_score = fuzz.WRatio(col1_norm, col2_norm) / 100.0
+
+        # 2. Phonetic (Jaro-Winkler) - Weight: 0.2
+        phonetic_score = jellyfish.jaro_winkler_similarity(col1_norm, col2_norm)
+
+        # 3. Semantic (Synonym) - Weight: 0.2
+        synonym_score = 0.0
+        col1_group = self.SYNONYM_MAP.get(col1_norm)
+        col2_group = self.SYNONYM_MAP.get(col2_norm)
+        if col1_group is not None and col1_group == col2_group:
+            synonym_score = 1.0
+
+        # 4. Data Type Match - Weight: 0.1
+        type_score = 1.0 if dtype1 == dtype2 and dtype1 != "empty" else 0.0
+
+        # Weighted average with adjusted weights
+        total_score = (lev_score * 0.4) + (phonetic_score * 0.1) + (synonym_score * 0.4) + (type_score * 0.1)
+
+        return total_score
+
     def generate_column_map(self, dataframes: List[pd.DataFrame]) -> Dict[str, List[str]]:
         if not dataframes: return {}
-        canonical_columns = list(dataframes[0].columns)
+
+        # Use the first dataframe's columns as the canonical standard
+        canonical_df = dataframes[0]
+        canonical_columns = list(canonical_df.columns)
         column_map: Dict[str, List[str]] = {col: [col] for col in canonical_columns}
 
-        # Normalize the canonical columns for matching
-        normalized_canonical = {self._normalize_string(c): c for c in canonical_columns}
+        # Pre-calculate dtypes and normalized names for the canonical columns
+        canonical_info = {
+            col: (self._normalize_string(col), self._get_probable_dtype(canonical_df[col]))
+            for col in canonical_columns
+        }
 
+        # Iterate through the rest of the dataframes to map their columns
         for df in dataframes[1:]:
             for col in df.columns:
-                if col in canonical_columns or col in (item for sublist in column_map.values() for item in sublist):
+                # Skip if column is already perfectly mapped to a canonical one
+                if col in canonical_columns:
+                    continue
+                # Skip if it has been mapped as an alias already
+                if any(col in v for v in column_map.values()):
                     continue
 
-                normalized_col = self._normalize_string(col)
+                col_norm = self._normalize_string(col)
+                col_dtype = self._get_probable_dtype(df[col])
 
-                # Use rapidfuzz to find the best match from the normalized canonical names
-                result = process.extractOne(normalized_col, normalized_canonical.keys(), scorer=fuzz.WRatio, score_cutoff=self.LEVENSHTEIN_THRESHOLD)
+                best_match_score = -1.0
+                best_match_canon = None
 
-                if result:
-                    best_match_normalized = result[0]
-                    original_canonical_name = normalized_canonical[best_match_normalized]
-                    column_map[original_canonical_name].append(col)
-                    logger.info(f"Mapped '{col}' to canonical column '{original_canonical_name}' with score {result[1]}")
+                for canon_col, (canon_norm, canon_dtype) in canonical_info.items():
+                    score = self._calculate_similarity_score(col_norm, canon_norm, col_dtype, canon_dtype)
+                    if score > best_match_score:
+                        best_match_score = score
+                        best_match_canon = canon_col
+
+                if best_match_canon and best_match_score >= self.SIMILARITY_THRESHOLD:
+                    column_map[best_match_canon].append(col)
+                    logger.info(f"Mapped column '{col}' to canonical '{best_match_canon}' with score {best_match_score:.2f}")
+                else:
+                    logger.warning(f"Column '{col}' could not be confidently mapped. Best score: {best_match_score:.2f}")
 
         unmapped_final = {col for df in dataframes for col in df.columns} - {item for sublist in column_map.values() for item in sublist}
         if unmapped_final: logger.warning(f"Unmapped columns: {list(unmapped_final)}")
         return column_map
 
-    # ... [Rest of the class uses the previous correct logic] ...
+    def _get_source_precedence(self, filename: str) -> int:
+        """Assigns a numerical precedence based on file extension."""
+        ext = os.path.splitext(filename)[1].lower()
+        if 'xls' in ext: return 0 # Excel
+        if 'csv' in ext: return 1 # CSV
+        if 'json' in ext: return 2 # JSON
+        # Assuming SQL sources will be identified differently, but for now:
+        if 'sql' in ext or 'db' in ext: return 3 # SQL
+        return 99 # Other types
+
     def _resolve_conflicts_for_group(self, group: pd.DataFrame) -> pd.Series:
-        group = group.sort_values('__source_precedence')
+        """Resolves conflicts for a group of rows based on source precedence and value frequency."""
+        # Sort by the defined source precedence (lower is better)
+        group = group.sort_values('__source_precedence', ascending=True)
+
         final_record = {}
         for col in group.columns:
-            if col == '__source_precedence': continue
+            if col in ['__source_precedence', '__id_column']:  # Exclude helper columns
+                continue
+
             valid_values = group[col].dropna()
+
             if valid_values.empty:
                 final_record[col] = None
                 continue
-            final_record[col] = valid_values.iloc[0]
+
+            # If there's more than one valid value, decide based on frequency
+            if len(valid_values) > 1:
+                value_counts = valid_values.value_counts()
+                # If the most frequent value is unique, use it
+                if len(value_counts) > 1 and value_counts.iloc[0] > value_counts.iloc[1]:
+                    final_record[col] = value_counts.index[0]
+                else:
+                    # If frequencies are tied, fall back to the highest precedence source
+                    final_record[col] = valid_values.iloc[0]
+            else:
+                # If only one valid value, use it
+                final_record[col] = valid_values.iloc[0]
+
         return pd.Series(final_record)
-    def merge_dataframes(self, dataframes: List[pd.DataFrame], column_map: Dict[str, List[str]], source_precedence: List[str]) -> pd.DataFrame:
+
+    def merge_dataframes(self, dataframes: List[pd.DataFrame], column_map: Dict[str, List[str]], source_filenames: List[str]) -> pd.DataFrame:
         processed_dfs = []
-        precedence_map = {name: i for i, name in enumerate(source_precedence)}
         for i, df in enumerate(dataframes):
             rename_dict = {alias: canon for canon, aliases in column_map.items() for alias in aliases if alias in df.columns}
             df_renamed = df.rename(columns=rename_dict)
-            original_filename = source_precedence[i]
-            df_renamed['__source_precedence'] = precedence_map[original_filename]
+
+            original_filename = source_filenames[i]
+            df_renamed['__source_precedence'] = self._get_source_precedence(original_filename)
             processed_dfs.append(df_renamed)
+
         concatenated_df = pd.concat(processed_dfs, ignore_index=True)
+
         id_column = next((col for col in column_map if "id" in self._normalize_string(col)), None)
         if id_column:
             logger.info(f"Using '{id_column}' for conflict resolution.")
+            # Use a stable sort to maintain original order for tie-breaking
+            concatenated_df = concatenated_df.sort_values('__source_precedence', kind='mergesort')
             merged_df = concatenated_df.groupby(id_column, group_keys=False).apply(self._resolve_conflicts_for_group)
-            merged_df = merged_df.reset_index(drop=True)
+            merged_df = merged_df.reset_index(drop=True) # Reset index after groupby.apply
         else:
-            logger.warning("No ID column found. Using simple duplicate removal.")
-            merged_df = concatenated_df.drop_duplicates(keep='first').drop(columns=['__source_precedence'])
-        final_columns = list(column_map.keys())
-        for col in final_columns:
-            if col not in merged_df.columns: merged_df[col] = pd.NA
-        merged_df = merged_df[final_columns]
+            logger.warning("No ID column found. Using simple duplicate removal based on precedence.")
+            # Sort by precedence and then drop duplicates, keeping the first (highest precedence)
+            concatenated_df = concatenated_df.sort_values('__source_precedence', kind='mergesort')
+            # Determine all columns except the helper one
+            final_columns = [col for col in concatenated_df.columns if col != '__source_precedence']
+            merged_df = concatenated_df.drop_duplicates(subset=final_columns, keep='first')
+
+        # Clean up helper column
+        if '__source_precedence' in merged_df.columns:
+            merged_df = merged_df.drop(columns=['__source_precedence'])
+
+        # Ensure all canonical columns are present in the final dataframe
+        final_columns_set = set(column_map.keys())
+        for col in final_columns_set:
+            if col not in merged_df.columns:
+                merged_df[col] = pd.NA
+
+        # Reorder columns to match the canonical order
+        ordered_columns = [col for col in column_map.keys() if col in merged_df.columns]
+        merged_df = merged_df[ordered_columns]
+
         final_df = self._normalize_and_clean(merged_df)
         logger.info(f"Merge complete. Initial: {len(concatenated_df)}, Final: {len(final_df)}")
         return final_df
@@ -127,14 +240,20 @@ class IntelligentMergeService:
                 df_copy[col] = df_copy[col].apply(lambda x: ''.join(c for c in unicodedata.normalize('NFD', x) if unicodedata.category(c) != 'Mn') if isinstance(x, str) else x)
         return df_copy
     def _validate_and_log(self, dataframes: List[pd.DataFrame], filenames: List[str], column_map: Dict[str, List[str]], required_columns: List[str] = None) -> Dict[str, Any]:
-        validation_results = {"issues": [], "high_null_columns": [], "missing_required_columns": [], "type_inconsistencies": []}
+        validation_results = {"issues": [], "high_null_columns": [], "missing_required_columns": [], "type_inconsistencies": [], "corrupt_rows_report": []}
         logger.info("--- Starting Pre-Merge Validation ---")
+
         mapped_canonical_cols = set(column_map.keys())
+
+        # 1. Check for missing required columns from the entire dataset
         if required_columns:
             for req_col in required_columns:
                 if req_col not in mapped_canonical_cols:
                     issue = f"Required column '{req_col}' is missing in all files."
-                    logger.error(issue); validation_results["missing_required_columns"].append(req_col)
+                    logger.error(issue)
+                    validation_results["missing_required_columns"].append(req_col)
+
+        # 2. Check for type inconsistencies across different files for the same canonical column
         for canon_col, aliases in column_map.items():
             col_types = set()
             for i, df in enumerate(dataframes):
@@ -144,8 +263,23 @@ class IntelligentMergeService:
             if len(col_types) > 1 and 'empty' not in col_types:
                 issue = f"Canonical column '{canon_col}' has inconsistent types: {list(col_types)}"
                 logger.warning(issue); validation_results["type_inconsistencies"].append(issue)
+        # 3. Detailed per-file validation (high nulls, corrupt rows)
         for i, df in enumerate(dataframes):
             filename = filenames[i]
+
+            # Create a renamed version for consistent checking of required columns
+            rename_dict = {alias: canon for canon, aliases in column_map.items() for alias in aliases if alias in df.columns}
+            df_renamed = df.rename(columns=rename_dict)
+
+            # Check for corrupt rows (nulls in required columns)
+            if required_columns:
+                corrupt_rows = df_renamed[df_renamed[required_columns].isnull().any(axis=1)]
+                if not corrupt_rows.empty:
+                    count = len(corrupt_rows)
+                    report = f"In '{filename}', found {count} rows with missing data in required columns."
+                    logger.warning(report)
+                    validation_results["corrupt_rows_report"].append({"file": filename, "corrupt_rows_count": count})
+
             if df.empty:
                 issue = f"File '{filename}' is empty."
                 logger.warning(issue); validation_results["issues"].append(issue)
@@ -183,10 +317,10 @@ class IntelligentMergeService:
         report = {
             "report_generated_at": datetime.utcnow().isoformat(),
             "processed_files": stats.get("filenames", []), "total_files": len(stats.get("filenames", [])),
-            "initial_total_rows": stats.get("initial_rows", 0),
+            "initial_total_rows": stats.get("initial_total_rows", 0),
             "final_merged_rows": stats.get("final_rows", 0),
             "unified_columns_map": stats.get("column_map", {}), "discarded_columns": stats.get("unmapped_columns", []),
-            "conflicts_resolved": stats.get("initial_rows", 0) - stats.get("final_rows", 0),
+            "conflicts_resolved": stats.get("initial_total_rows", 0) - stats.get("final_rows", 0),
             "validation_issues": stats.get("validation_issues", {}), "final_quality_score_percent": quality_score,
         }
         with open(REPORT_FILE_PATH, 'w') as f: json.dump(report, f, indent=4)
