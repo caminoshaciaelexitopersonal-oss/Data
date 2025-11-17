@@ -15,6 +15,7 @@ python-multipart
 openpyxl
 sqlalchemy
 psycopg2-binary
+scipy
 matplotlib
 seaborn
 prometheus-fastapi-instrumentator
