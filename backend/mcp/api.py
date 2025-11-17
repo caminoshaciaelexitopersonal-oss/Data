@@ -2,7 +2,9 @@ from fastapi import APIRouter, HTTPException, Body, Depends, Security
 from fastapi.security import APIKeyHeader
 from typing import Dict, Any
 import uuid
+ 
 import pandas as pd
+ 
 
 from backend.mcp.schemas import (
     SessionStartRequest,
@@ -11,15 +13,18 @@ from backend.mcp.schemas import (
     SessionResponse,
     ChatResponse
 )
+ 
 from backend.mpa.ingestion.service import IngestionService
 from backend.mpa.etl.service import EtlService
 from backend.mpa.eda.service import EdaService
+ 
 
 # --- MCP State ---
 # A simple in-memory dictionary to store session data.
 # In a real-world scenario, this would be a more robust storage like Redis or a database.
 sessions: Dict[str, Any] = {}
 
+ 
 # --- Dependency for MPA Services ---
 def get_ingestion_service():
     return IngestionService()
@@ -30,6 +35,7 @@ def get_etl_service():
 def get_eda_service():
     return EdaService()
 
+ 
 # --- Security Placeholder ---
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -57,6 +63,7 @@ router = APIRouter(
 
 
 @router.post("/sessions/", response_model=SessionResponse)
+ 
 async def create_session(
     request: SessionStartRequest,
     ingestion_service: IngestionService = Depends(get_ingestion_service)
@@ -77,6 +84,7 @@ async def create_session(
     print(f"MCP created session {session_id} using the Ingestion MPA.")
 
     return {"session_id": session_id, "message": "Session created successfully via MCP orchestration."}
+ 
 
 @router.post("/sessions/{session_id}/chat", response_model=ChatResponse)
 async def session_chat(session_id: str, request: ChatRequest):
@@ -92,6 +100,7 @@ async def session_chat(session_id: str, request: ChatRequest):
     return {"output": f"Placeholder response for: '{request.message}'"}
 
 @router.post("/sessions/{session_id}/etl")
+ 
 async def session_etl(
     session_id: str,
     request: EtlRequest,
@@ -99,10 +108,12 @@ async def session_etl(
 ):
     """
     Applies an ETL pipeline to the session's data by orchestrating the ETL MPA.
+ 
     """
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="Session not found.")
 
+ 
     current_df = sessions[session_id].get("data")
     if current_df is None:
         raise HTTPException(status_code=400, detail="No data found in session to process.")
@@ -117,6 +128,7 @@ async def session_etl(
         "message": f"ETL pipeline with {len(request.steps)} steps applied successfully.",
         "data_sample": processed_df.head().to_dict(orient='records')
     }
+ 
 
 @router.get("/sessions/{session_id}/artifacts/visualizations")
 async def get_visualizations(session_id: str):
@@ -129,6 +141,7 @@ async def get_visualizations(session_id: str):
 
     # Placeholder
     return {"visualizations": "No visualizations available yet (placeholder)."}
+ 
 
 @router.post("/sessions/{session_id}/analysis/eda")
 async def session_eda_analysis(
@@ -149,7 +162,7 @@ async def session_eda_analysis(
 
     # In the future, these results could be stored in the session state.
     return eda_results
-
+ 
 @router.post("/sessions/{session_id}/analysis/data-health")
 async def session_data_health(
     session_id: str,
@@ -168,3 +181,4 @@ async def session_data_health(
     health_report = eda_service.generate_data_health_report(df)
 
     return health_report
+ 
