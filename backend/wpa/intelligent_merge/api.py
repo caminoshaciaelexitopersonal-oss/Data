@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from typing import List
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
+from typing import List, Optional
 import pandas as pd
 import os
 
@@ -20,11 +20,13 @@ def get_ingestion_service() -> IngestionService:
 @router.post("/upload-and-merge", response_model=IntelligentMergeResponse)
 async def upload_and_merge_files(
     files: List[UploadFile] = File(..., description="Multiple files to be intelligently merged."),
+    required_columns: Optional[List[str]] = Query(None, description="A list of column names that must be present and non-null."),
     merge_service: IntelligentMergeService = Depends(get_intelligent_merge_service),
     ingestion_service: IngestionService = Depends(get_ingestion_service)
 ):
     """
     Orchestrates the entire intelligent merge workflow from file uploads.
+    Allows specifying required columns for data validation.
     """
     if len(files) < 2:
         raise HTTPException(status_code=400, detail="Please upload at least two files to merge.")
@@ -46,8 +48,10 @@ async def upload_and_merge_files(
             raise HTTPException(status_code=500, detail=f"Error processing file {file.filename}: {e}")
 
     try:
-        # Run the main pipeline
-        merged_df, report_path = merge_service.run_merge_pipeline(dataframes, filenames)
+        # Run the main pipeline, passing the required columns
+        merged_df, report_path = merge_service.run_merge_pipeline(
+            dataframes, filenames, required_columns=required_columns
+        )
 
         # Export to all formats
         csv_path = merge_service.export_to_csv(merged_df, filename="merged_output.csv")
