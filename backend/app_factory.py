@@ -26,9 +26,21 @@ def create_app():
     # For now, as all endpoints are in main, we will refactor main.py to use this.
     # Import and include routers/endpoints here to avoid circular imports
     # and side effects on import time.
-    from backend.app.api import ingestion, etl, core
-    app.include_router(ingestion.router, prefix="/api/v1")
-    app.include_router(etl.router, prefix="/api/v1")
-    app.include_router(core.router, prefix="/api/v1")
+    from backend.app.api import core
+    from backend.mcp import api as mcp_api
+    from backend.mpa.ingestion import api as ingestion_mpa_api
+    from backend.wpa.auto_analysis import api as wpa_auto_analysis_api
+
+    # --- New MCP Router ---
+    app.include_router(mcp_api.router)
+
+    # --- MPA Routers ---
+    app.include_router(ingestion_mpa_api.router)
+
+    # --- WPA Routers ---
+    app.include_router(wpa_auto_analysis_api.router)
+
+    # --- Legacy Routers (to be phased out) ---
+    app.include_router(core.router, prefix="/api/v1", tags=["Core (Legacy)"])
 
     return app
