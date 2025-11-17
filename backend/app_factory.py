@@ -46,6 +46,12 @@ def create_app():
     from backend.mpa.eda import api as eda_mpa_api
     app.include_router(eda_mpa_api.router)
  
+    from backend.mpa.quality import api as quality_mpa_api
+    app.include_router(quality_mpa_api.router)
+    from backend.mpa.ml import api as ml_mpa_api
+    app.include_router(ml_mpa_api.router)
+ 
+ 
     # --- WPA Routers ---
     app.include_router(wpa_auto_analysis_api.router)
     app.include_router(wpa_modeling_api.router)

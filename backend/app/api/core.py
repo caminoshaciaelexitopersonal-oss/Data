@@ -33,9 +33,18 @@ async def download_report():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el reporte: {e}")
 
+import time
+from uuid import uuid4
+from backend.services.prompt_tracer import PromptTracerService, get_prompt_tracer_service
+
 @router.post("/chat/agent/")
-async def chat_agent(request: ChatRequest, agent_executor = Depends(get_agent_executor)):
+async def chat_agent(
+    request: ChatRequest,
+    agent_executor = Depends(get_agent_executor),
+    tracer_service: PromptTracerService = Depends(get_prompt_tracer_service)
+):
     try:
+ 
         # 1. Crear un DataFrame de muestra para el pre-análisis
         df_sample = pd.DataFrame(request.data)
 
@@ -51,6 +60,7 @@ async def chat_agent(request: ChatRequest, agent_executor = Depends(get_agent_ex
 
         # 4. Invocar al agente con el input enriquecido
         result = await agent_executor.ainvoke({"input": enriched_input, "data": request.data})
+ 
 
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
