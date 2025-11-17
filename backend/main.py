@@ -40,11 +40,22 @@ agent = create_react_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
 
 # --- App Creation ---
+# The app is now created and configured in the app_factory.
+# We just import it and attach the state.
 app = create_app()
 
-# Attach the agent_executor to the app's state
-app.state.agent_executor = agent_executor
+def configure_app(app_instance):
+    app_instance.state.agent_executor = agent_executor
+    return app_instance
+
+app = configure_app(app)
 
 @app.get("/")
 def read_root():
     return {"message": "SADI Backend is running."}
+
+# The following block is for running the app directly with uvicorn
+# during development. It won't be executed when imported.
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

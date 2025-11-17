@@ -27,20 +27,26 @@ def create_app():
     # Import and include routers/endpoints here to avoid circular imports
     # and side effects on import time.
     from backend.app.api import core
-    from backend.mcp import api as mcp_api
+    # from backend.mcp import api as mcp_api  # MCP API not yet implemented
     from backend.mpa.ingestion import api as ingestion_mpa_api
  
     from backend.wpa.auto_analysis import api as wpa_auto_analysis_api
+    from backend.wpa.modeling import api as wpa_modeling_api
+    from backend.wpa.report_generation import api as wpa_report_generation_api
+    from backend.wpa.db_ingestion import api as wpa_db_ingestion_api
  
 
     # --- New MCP Router ---
-    app.include_router(mcp_api.router)
+    # app.include_router(mcp_api.router) # MCP API not yet implemented
 
     # --- MPA Routers ---
     app.include_router(ingestion_mpa_api.router)
  
     # --- WPA Routers ---
     app.include_router(wpa_auto_analysis_api.router)
+    app.include_router(wpa_modeling_api.router)
+    app.include_router(wpa_report_generation_api.router)
+    app.include_router(wpa_db_ingestion_api.router)
 
  
     # --- Legacy Routers (to be phased out) ---

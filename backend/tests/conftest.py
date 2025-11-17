@@ -2,7 +2,7 @@ import pytest
 import os
 os.environ['TESTING'] = 'True'
 from fastapi.testclient import TestClient
-from backend.app_factory import create_app
+from backend.main import app, configure_app
 from backend.celery_app import create_celery_app
 
 @pytest.fixture(scope="session")
@@ -13,11 +13,6 @@ def celery_app_for_testing():
     """
     return create_celery_app(task_always_eager=True)
 
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain import hub
-from backend.llm.llm_router import get_llm_for_agent
-from backend.tools.main_tools import get_tools
-
 class DummyAgent:
     async def ainvoke(self, data):
         return {"output": "Mocked agent response."}
@@ -25,11 +20,9 @@ class DummyAgent:
 @pytest.fixture(scope="module")
 def test_app(celery_app_for_testing):
     """
-    Creates a FastAPI app instance for testing, including the agent executor.
+    Configures the imported app instance specifically for testing.
     """
-    app = create_app()
-
-    # Attach a dummy agent executor for testing
+    # Replace the real agent with a dummy for testing
     app.state.agent_executor = DummyAgent()
     return app
 
