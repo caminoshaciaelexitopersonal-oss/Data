@@ -34,3 +34,6 @@ nbformat
 # Testing dependencies
 pytest
 setuptools
+jellyfish
+rapidfuzz
+pyarrow
