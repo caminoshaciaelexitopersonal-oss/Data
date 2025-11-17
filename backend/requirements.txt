@@ -177,6 +177,8 @@ iniconfig==2.3.0
     # via pytest
 itsdangerous==2.2.0
     # via flask
+jellyfish==1.2.1
+    # via -r backend/requirements.in
 jinja2==3.1.6
     # via
     #   flask
@@ -358,7 +360,9 @@ protobuf==4.25.8
 psycopg2-binary==2.9.11
     # via -r backend/requirements.in
 pyarrow==15.0.2
-    # via mlflow
+    # via
+    #   -r backend/requirements.in
+    #   mlflow
 pyasn1==0.6.1
     # via
     #   pyasn1-modules
@@ -408,6 +412,8 @@ pyyaml==6.0.3
     #   uvicorn
 querystring-parser==1.2.4
     # via mlflow
+rapidfuzz==3.14.3
+    # via -r backend/requirements.in
 redis==5.0.7
     # via celery
 referencing==0.37.0
