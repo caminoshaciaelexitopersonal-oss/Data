@@ -31,10 +31,37 @@ async def download_report():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el reporte: {e}")
 
+import time
+from uuid import uuid4
+from backend.services.prompt_tracer import PromptTracerService, get_prompt_tracer_service
+
 @router.post("/chat/agent/")
-async def chat_agent(request: ChatRequest, agent_executor = Depends(get_agent_executor)):
+async def chat_agent(
+    request: ChatRequest,
+    agent_executor = Depends(get_agent_executor),
+    tracer_service: PromptTracerService = Depends(get_prompt_tracer_service)
+):
     try:
+        # Assume a session_id is passed in the request, or generate one.
+        session_id = str(getattr(request, 'session_id', uuid4()))
+        start_time = time.time()
+
         result = await agent_executor.ainvoke({"input": request.message, "data": request.data})
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Determine model used (this might need to be sourced from the agent's config)
+        model_used = "default_model"
+
+        tracer_service.log_prompt(
+            session_id=session_id,
+            prompt=request.message,
+            response=result,
+            model_used=model_used,
+            execution_time=execution_time
+        )
+
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
             return {"output": result["output"]}
