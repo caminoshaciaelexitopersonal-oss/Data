@@ -11,6 +11,7 @@ ENV PYTHONPATH "${PYTHONPATH}:/app"
 COPY ./requirements.txt .
 
 # Instala los requerimientos
+RUN pip install setuptools
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia el resto del código de la aplicación al directorio de trabajo
