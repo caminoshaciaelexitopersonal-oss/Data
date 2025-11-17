@@ -27,8 +27,14 @@ def create_app():
     # Import and include routers/endpoints here to avoid circular imports
     # and side effects on import time.
     from backend.app.api import ingestion, etl, core
-    app.include_router(ingestion.router, prefix="/api/v1")
-    app.include_router(etl.router, prefix="/api/v1")
-    app.include_router(core.router, prefix="/api/v1")
+    from backend.mcp import api as mcp_api
+
+    # --- New MCP Router ---
+    app.include_router(mcp_api.router)
+
+    # --- Legacy Routers (to be phased out) ---
+    app.include_router(ingestion.router, prefix="/api/v1", tags=["Ingestion (Legacy)"])
+    app.include_router(etl.router, prefix="/api/v1", tags=["ETL (Legacy)"])
+    app.include_router(core.router, prefix="/api/v1", tags=["Core (Legacy)"])
 
     return app
