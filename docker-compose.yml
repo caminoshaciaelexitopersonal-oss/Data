@@ -77,6 +77,18 @@ services:
     depends_on:
       - prometheus
 
+  tester:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: ["python", "-m", "pytest", "backend/tests"]
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - redis
+      - mlflow
+
 networks:
   default:
     driver: bridge

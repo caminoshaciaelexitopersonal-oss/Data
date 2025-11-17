@@ -74,7 +74,7 @@ def log_step(
     # Keep the original functionality for the frontend Code Viewer
     log_entry = {
         "description": description,
-        "code": code,
+        "codigo": code,
         "timestamp": timestamp,
         "llm_prompt": llm_prompt,
         "llm_response": llm_response,

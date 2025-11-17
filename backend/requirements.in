@@ -33,3 +33,4 @@ nbformat
 
 # Testing dependencies
 pytest
+setuptools
