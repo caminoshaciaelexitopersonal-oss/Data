@@ -27,7 +27,7 @@ def create_app():
     # Import and include routers/endpoints here to avoid circular imports
     # and side effects on import time.
     from backend.app.api import core
-    # from backend.mcp import api as mcp_api  # MCP API not yet implemented
+    from backend.mcp import api as mcp_api
     from backend.mpa.ingestion import api as ingestion_mpa_api
  
     from backend.wpa.auto_analysis import api as wpa_auto_analysis_api
@@ -37,7 +37,7 @@ def create_app():
  
 
     # --- New MCP Router ---
-    # app.include_router(mcp_api.router) # MCP API not yet implemented
+    app.include_router(mcp_api.router)
 
     # --- MPA Routers ---
     app.include_router(ingestion_mpa_api.router)
