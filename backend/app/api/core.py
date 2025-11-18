@@ -9,6 +9,8 @@ from backend.visualizations import get_all_visualizations
 from backend.report_generator import generate_report
 from backend.schemas import ChatRequest
 from fastapi import Request
+from backend.services.prompt_tracer import PromptTracerService
+import uuid
 
 router = APIRouter()
 
@@ -33,14 +35,21 @@ async def download_report():
 
 @router.post("/chat/agent/")
 async def chat_agent(request: ChatRequest, agent_executor = Depends(get_agent_executor)):
+    tracer = PromptTracerService()
+    session_id = request.session_id or str(uuid.uuid4())
+
     try:
         result = await agent_executor.ainvoke({"input": request.message, "data": request.data})
+
+        tracer.log_trace(session_id, request.message, result)
+
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
             return {"output": result["output"]}
         # fallback defensivo
         return {"output": str(result)}
     except Exception as e:
+        tracer.log_trace(session_id, request.message, {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Error en el agente de chat: {e}")
 
 @router.get("/export/code")

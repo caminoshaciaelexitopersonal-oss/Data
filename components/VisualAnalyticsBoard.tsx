@@ -9,6 +9,10 @@ import html2canvas from 'html2canvas';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useDashboardStore } from "../store/dashboardStore"; // Ajusta la ruta si es necesario
+import { QualityScoreCard } from '../features/data-quality/QualityScoreCard';
+import { QualityIssuesList } from '../features/data-quality/QualityIssuesList';
+import { MissingValuesHeatmap } from '../features/data-quality/MissingValuesHeatmap';
+import { MultiFilterPanel } from '../features/interactive-filters/MultiFilterPanel';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -48,6 +52,8 @@ const renderChart = (type: string, data: any) => {
 
 
 export const VisualAnalyticsBoard: React.FC = () => {
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
+    const [activeTab, setActiveTab] = useState<'visualizations' | 'quality'>('visualizations');
     const dashboardRef = React.useRef<HTMLDivElement>(null);
     const { filteredVisualizations, loading, error, selectedCharts, fetchVisualizations, toggleChartSelection, setFilter } = useDashboardStore();
 
@@ -64,6 +70,7 @@ export const VisualAnalyticsBoard: React.FC = () => {
 
     useEffect(() => {
         fetchVisualizations();
+        useDashboardStore.getState().fetchDataHealthReport();
     }, [fetchVisualizations]);
 
     if (loading) return <p className="p-8 text-white">Cargando visualizaciones...</p>;
@@ -73,14 +80,45 @@ export const VisualAnalyticsBoard: React.FC = () => {
     const availableCharts = Object.keys(filteredVisualizations);
 
     return (
-        <div className="p-8 space-y-10 bg-gray-900 text-white min-h-full overflow-y-auto" ref={dashboardRef}>
-            <header>
-                <h1 className="text-3xl font-bold">Panel de Visualización Avanzado</h1>
-                <p className="text-slate-300">Seleccione las visualizaciones que desea mostrar en el panel.</p>
+        <div className="flex h-full bg-gray-900 text-white">
+            {/* --- Panel Lateral de Filtros --- */}
+            <div className={`transition-all duration-300 ${isFilterPanelOpen ? 'w-80' : 'w-0'} overflow-hidden`}>
+                <div className="p-4">
+                    <MultiFilterPanel />
+                </div>
+            </div>
+
+            {/* --- Contenido Principal --- */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <button onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)} className="absolute top-4 right-4 bg-gray-700 p-2 rounded-full z-10">
+                    {isFilterPanelOpen ? '<' : '>'}
+                </button>
+                <div className="p-8 space-y-10 overflow-y-auto" ref={dashboardRef}>
+                    <header>
+                        <h1 className="text-3xl font-bold">Panel de Analítica Avanzada</h1>
+                <p className="text-slate-300">Explore las visualizaciones y la calidad de sus datos.</p>
             </header>
 
-            {/* --- Selector de Gráficos --- */}
-            <div className="bg-gray-800 p-4 rounded-xl shadow-lg">
+            {/* --- Navegación por Pestañas --- */}
+            <div className="flex border-b border-gray-700">
+                <button
+                    onClick={() => setActiveTab('visualizations')}
+                    className={`px-4 py-2 text-sm font-medium ${activeTab === 'visualizations' ? 'border-b-2 border-cyan-500 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Panel de Visualización
+                </button>
+                <button
+                    onClick={() => setActiveTab('quality')}
+                    className={`px-4 py-2 text-sm font-medium ${activeTab === 'quality' ? 'border-b-2 border-cyan-500 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                    Informe de Calidad de Datos
+                </button>
+            </div>
+
+            {activeTab === 'visualizations' && (
+                <>
+                    {/* --- Selector de Gráficos --- */}
+                    <div className="bg-gray-800 p-4 rounded-xl shadow-lg">
                 <h2 className="text-lg font-semibold mb-3">Selector de Gráficos</h2>
                 <div className="flex flex-wrap gap-3">
                     {availableCharts.map(chartKey => (
@@ -149,6 +187,24 @@ export const VisualAnalyticsBoard: React.FC = () => {
                  <a href={`${API_BASE_URL}/export/notebook`} className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">Descargar Notebook (.ipynb)</a>
                  <a href={`${API_BASE_URL}/download-report?format=docx`} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Descargar Informe (.docx)</a>
                  <a href={`${API_BASE_URL}/download-report?format=pdf`} className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">Descargar Informe (.pdf)</a>
+            </div>
+                </>
+            )}
+
+            {activeTab === 'quality' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1">
+                        <QualityScoreCard score={useDashboardStore.getState().dataHealthReport?.health_score} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <QualityIssuesList issues={useDashboardStore.getState().dataHealthReport?.report} />
+                    </div>
+                    <div className="md:col-span-3">
+                        <MissingValuesHeatmap data={useDashboardStore.getState().visualizations?.raw_data} />
+                    </div>
+                </div>
+            )}
+                </div>
             </div>
         </div>
     );
