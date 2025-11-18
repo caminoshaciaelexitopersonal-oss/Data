@@ -74,10 +74,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => {
                 return;
             }
             try {
-                const response = await fetch(`${API_BASE_URL}/data-health-report`, {
+                const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data: rawData }),
+                    body: JSON.stringify( rawData ),
                 });
                 if (!response.ok) {
                     throw new Error('No se pudo generar el informe de salud.');
