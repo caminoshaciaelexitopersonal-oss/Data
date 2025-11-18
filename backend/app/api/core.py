@@ -11,6 +11,8 @@ import pandas as pd
 from backend.agent.pre_analysis import detect_intent
 from backend.schemas import ChatRequest
 from fastapi import Request
+from backend.services.prompt_tracer import PromptTracerService
+import uuid
 
 router = APIRouter()
 
@@ -38,6 +40,16 @@ from uuid import uuid4
 from backend.services.prompt_tracer import PromptTracerService, get_prompt_tracer_service
 
 @router.post("/chat/agent/")
+ 
+async def chat_agent(request: ChatRequest, agent_executor = Depends(get_agent_executor)):
+    tracer = PromptTracerService()
+    session_id = request.session_id or str(uuid.uuid4())
+
+    try:
+        result = await agent_executor.ainvoke({"input": request.message, "data": request.data})
+
+        tracer.log_trace(session_id, request.message, result)
+ 
 async def chat_agent(
     request: ChatRequest,
     agent_executor = Depends(get_agent_executor),
@@ -60,7 +72,7 @@ async def chat_agent(
 
         # 4. Invocar al agente con el input enriquecido
         result = await agent_executor.ainvoke({"input": enriched_input, "data": request.data})
- 
+  
 
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
@@ -68,6 +80,7 @@ async def chat_agent(
         # fallback defensivo
         return {"output": str(result)}
     except Exception as e:
+        tracer.log_trace(session_id, request.message, {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Error en el agente de chat: {e}")
 
 @router.get("/export/code")

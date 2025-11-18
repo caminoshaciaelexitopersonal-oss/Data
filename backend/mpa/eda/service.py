@@ -39,7 +39,7 @@ class EdaService:
         buf.seek(0)
         return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-    def _generate_eda_plots(self, df: pd.DataFrame) -> Dict[str, str]:
+    def generate_eda_plots(self, df: pd.DataFrame) -> Dict[str, str]:
         plots = {}
         numerical_cols = df.select_dtypes(include=['number']).columns
         for col in numerical_cols:
@@ -58,7 +58,7 @@ class EdaService:
             return {"error": "No data provided for EDA analysis."}
         try:
             stats = self._calculate_advanced_stats(df)
-            plots = self._generate_eda_plots(df)
+            plots = self.generate_eda_plots(df)
             return {"status": "success", "advanced_statistics": stats, "plots_base64": plots}
         except Exception as e:
             return {"status": "error", "message": f"An error occurred during EDA generation: {e}"}

@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 class ChatRequest(BaseModel):
     message: str
     data: List[Dict[str, Any]]
+    session_id: Optional[str] = None
     llm_preference: Optional[str] = None
 
 class PredictionRequest(BaseModel):

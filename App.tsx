@@ -5,6 +5,7 @@ import { ChatView } from './components/ChatView';
 import { DataSourceModal } from './components/DataSourceModal';
 import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard'; // Importar PVA
+import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons'; // Importar ChartIcon
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -41,6 +42,7 @@ const App: React.FC = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [isDataSourceModalOpen, setIsDataSourceModalOpen] = useState(false);
     const [isCodeViewerModalOpen, setIsCodeViewerModalOpen] = useState(false);
+    const [isPromptTraceModalOpen, setIsPromptTraceModalOpen] = useState(false);
     const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
@@ -323,6 +325,7 @@ const App: React.FC = () => {
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
             {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onMongoDbConnect={(uri, db, collection) => { handleMongoDbConnect(uri, db, collection); setIsDataSourceModalOpen(false); }} onS3Connect={(bucket, key) => { handleS3Connect(bucket, key); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
             {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} /> )}
+            {isPromptTraceModalOpen && ( <PromptTraceModal onClose={() => setIsPromptTraceModalOpen(false)} /> )}
 
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h1 className="text-xl font-bold">Sistema de Analítica de Datos Inteligente (SADI)</h1>
@@ -352,6 +355,12 @@ const App: React.FC = () => {
                         className="bg-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <CodeIcon className="w-4 h-4" /> Ver Pasos y Código
+                    </button>
+                    <button
+                        onClick={() => setIsPromptTraceModalOpen(true)}
+                        className="bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                        <CodeIcon className="w-4 h-4" /> Ver Trazas de Prompts
                     </button>
                 </div>
             </header>
