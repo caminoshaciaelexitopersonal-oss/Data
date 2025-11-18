@@ -2,9 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 import mlflow
+from backend.middleware.hardening_middleware import HardeningMiddleware
 
 def create_app():
     app = FastAPI()
+
+    # Add Hardening Middleware first to process requests early
+    app.add_middleware(HardeningMiddleware)
 
     # Configure CORS
     app.add_middleware(
@@ -35,6 +39,8 @@ def create_app():
  
     from backend.routers.prompts_api import router as prompts_router
     from backend.routers.eda_recalculate_api import router as eda_recalculate_router
+    from backend.routers.export_api import router as export_router
+    from backend.routers.validation_api import router as validation_router
  
     from backend.routers.pipelines_api import router as pipelines_router
  
@@ -63,6 +69,8 @@ def create_app():
  
     app.include_router(prompts_router)
     app.include_router(eda_recalculate_router)
+    app.include_router(export_router)
+    app.include_router(validation_router)
  
     app.include_router(pipelines_router)
  
