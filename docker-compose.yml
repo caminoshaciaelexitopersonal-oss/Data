@@ -7,9 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app/backend
-      - mlflow_data:/mlflow # Montar volumen de mlflow
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MLFLOW_TRACKING_URI=http://mlflow:5000
@@ -36,8 +33,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     command: celery -A celery_worker.celery_app worker --loglevel=info
-    volumes:
-      - ./backend:/app/backend
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MLFLOW_TRACKING_URI=http://mlflow:5000
@@ -83,8 +78,6 @@ services:
       dockerfile: Dockerfile
     working_dir: /app
     command: ["python", "-m", "pytest", "backend/tests"]
-    volumes:
-      - ./backend:/app/backend
     depends_on:
       - redis
       - mlflow

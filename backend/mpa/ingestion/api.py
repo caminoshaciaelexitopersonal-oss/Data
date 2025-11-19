@@ -18,9 +18,9 @@ async def upload_file(
     This is the new MPA-based endpoint for file ingestion.
     """
     df = await ingestion_service.process_file(file)
-    # Return filename and a sample of the data
+    # Return filename and the full data
     return {
         "filename": file.filename,
-        "data_sample": df.head().to_dict(orient="records"),
+        "data": df.to_dict(orient="records"),
         "message": "File processed successfully by the Ingestion MPA."
     }
