@@ -14,6 +14,7 @@ ALLOWED_MIMETYPES = [
     "application/zip",
     "application/gzip",
     "application/x-tar",
+    "multipart/form-data",
 ]
 
 class HardeningMiddleware(BaseHTTPMiddleware):

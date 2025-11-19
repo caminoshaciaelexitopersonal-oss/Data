@@ -214,9 +214,13 @@ const App: React.FC = () => {
     const handleFileLoad = async (file: File) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando archivo...' } });
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', file); // Ensure the key is 'file'
         try {
-            const response = await fetch(`${API_BASE_URL}/upload-data/`, { method: 'POST', body: formData });
+            // Corrected endpoint
+            const response = await fetch(`${API_BASE_URL}/mpa/ingestion/upload-file/`, {
+                method: 'POST',
+                body: formData
+            });
             if (!response.ok) throw new Error((await response.json()).detail);
             
             const { filename, data } = await response.json();
