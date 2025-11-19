@@ -1,3 +1,4 @@
+ 
 # Informe Ampliado de Endpoints Faltantes y Rutas Desconectadas
 
 ## Objetivo
@@ -59,3 +60,4 @@ Los siguientes endpoints representan funcionalidades de ingesta de datos que exi
 - **Endpoint Invocado:** `POST /upload-data/`
 - **Impacto Funcional:** Si un usuario sube un archivo Excel con múltiples hojas, la aplicación no puede manejarlo, limitando la capacidad de análisis de este tipo de archivos.
 - **Recomendación Técnica:** Modificar el `IngestionService` para que, si detecta un archivo Excel, devuelva la lista de hojas al frontend. El frontend debería entonces permitir al usuario seleccionar una hoja y reenviar la petición con un parámetro `sheet_name`, que el servicio usaría al leer el archivo con `pandas`.
+ 
