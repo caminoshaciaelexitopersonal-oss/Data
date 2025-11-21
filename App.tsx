@@ -69,7 +69,7 @@ const App: React.FC = () => {
     const pollTaskStatus = (taskId: string) => {
         const interval = setInterval(async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/v1/etl/status/${taskId}`);
+                const response = await fetch(`${API_BASE_URL}/mcp/tasks/${taskId}/status`);
                 if (!response.ok) {
                     // Stop polling on server error, but don't clear the toast
                     // as it might contain the initial "in progress" message.
@@ -97,7 +97,7 @@ const App: React.FC = () => {
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/data-health-report/`, {
+            const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ data }),
@@ -116,34 +116,13 @@ const App: React.FC = () => {
     };
 
     const handleExcelFileLoad = async (file: File) => {
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Procesando archivo Excel...' } });
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/upload-data/`, { method: 'POST', body: formData });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { filename, data, sheet_names } = await response.json();
-
-            if (sheet_names && sheet_names.length > 1) {
-                setSheetModalState({ isOpen: true, file, sheetNames: sheet_names });
-            } else {
-                dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
-                addToast(`Archivo '${filename}' cargado correctamente.`, 'success');
-                fetchAndSetDataHealthReport(data, filename); // Nueva llamada
-            }
-        } catch (error) {
-            addToast(`Error al cargar el archivo Excel: ${(error as Error).message}`, 'error');
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
+        await handleFileLoad(file);
     };
 
     const handleMongoDbConnect = async (uri: string, db: string, collection: string) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a MongoDB...' } });
         try {
-            const response = await fetch(`${API_BASE_URL}/load-from-mongodb/`, {
+            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-mongodb`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mongo_uri: uri, db_name: db, collection_name: collection }),
@@ -165,14 +144,14 @@ const App: React.FC = () => {
     const handleS3Connect = async (bucket: string, key: string) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando datos desde S3...' } });
         try {
-            const response = await fetch(`${API_BASE_URL}/load-from-s3/`, {
+            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-s3`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ bucket_name: bucket, object_key: key }),
             });
             if (!response.ok) throw new Error((await response.json()).detail);
 
-            const { data, sheet_names } = await response.json();
+            const { data } = await response.json();
             const fileName = `S3: ${bucket}/${key}`;
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
             addToast(`Datos cargados desde S3 correctamente.`, 'success');
@@ -187,28 +166,7 @@ const App: React.FC = () => {
     const handleSheetSelection = async (sheetName: string, file: File | null) => {
         if (!file) return;
         setSheetModalState({ isOpen: false, file: null, sheetNames: [] });
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: `Cargando hoja '${sheetName}'...` } });
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/upload-data/?sheet_name=${encodeURIComponent(sheetName)}`, {
-                method: 'POST',
-                body: formData,
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { filename, data } = await response.json();
-            const fullFileName = `${filename} (${sheetName})`;
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: fullFileName, qualityReport: {}, outlierReport: {} } });
-            addToast(`Hoja '${sheetName}' cargada correctamente.`, 'success');
-            fetchAndSetDataHealthReport(data, fullFileName);
-        } catch (error) {
-            addToast(`Error al cargar la hoja de cálculo: ${(error as Error).message}`, 'error');
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
+        await handleFileLoad(file);
     };
 
     const handleFileLoad = async (file: File) => {
@@ -240,7 +198,7 @@ const App: React.FC = () => {
     const handleDbConnect = async (uri: string, query: string) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a la base de datos...' } });
         try {
-            const response = await fetch(`${API_BASE_URL}/load-from-db/`, {
+            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-db`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ db_uri: uri, query }),
@@ -275,7 +233,7 @@ const App: React.FC = () => {
             throw new Error("No hay datos cargados. Por favor, carga un archivo o conéctate a una base de datos primero.");
         }
         try {
-            const response = await fetch(`${API_BASE_URL}/chat/agent/`, {
+            const response = await fetch(`${API_BASE_URL}/api/v1/chat/agent/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -307,7 +265,7 @@ const App: React.FC = () => {
         });
 
         try {
-            const response = await fetch(`${API_BASE_URL}/upload/multi`, {
+            const response = await fetch(`${API_BASE_URL}/mpa/ingestion/multi-upload/`, {
                 method: 'POST',
                 body: formData,
             });

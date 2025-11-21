@@ -28,7 +28,9 @@ def _get_openai_client() -> ChatOpenAI:
     return ChatOpenAI(api_key=OPENAI_API_KEY, model="gpt-4", temperature=0)
 
 def _get_ollama_client(model: str = "llama3") -> Ollama:
-    """Initializes and returns the Ollama client."""
+    """Initializes and returns the Ollama client only if OLLAMA_BASE_URL is set."""
+    if not os.getenv("OLLAMA_BASE_URL"):
+        return None
     # Note: This assumes the Ollama service is reachable.
     # A real implementation should have a health check.
     return Ollama(base_url=OLLAMA_BASE_URL, model=model, temperature=0)

@@ -20,7 +20,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose }) => 
     useEffect(() => {
         const fetchSteps = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/get-steps`);
+                const response = await fetch(`${API_BASE_URL}/api/v1/get-steps`);
                 if (!response.ok) {
                     throw new Error('No se pudo obtener los pasos del servidor.');
                 }

@@ -66,7 +66,7 @@ def test_wpa_db_ingestion_endpoint(client: TestClient):
             "data_preview": [{"col1": 1}]
         }
 
-        response = client.post("/wpa/ingestion/db", json=request_data)
+        response = client.post("/wpa/ingestion/from-db", json=request_data)
 
         assert response.status_code == 200
         json_res = response.json()
