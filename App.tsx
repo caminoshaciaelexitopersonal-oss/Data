@@ -67,6 +67,7 @@ const App: React.FC = () => {
     };
 
     const pollTaskStatus = (taskId: string) => {
+ 
         const interval = setInterval(async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/mcp/tasks/${taskId}/status`);
@@ -75,7 +76,7 @@ const App: React.FC = () => {
                     // as it might contain the initial "in progress" message.
                     clearInterval(interval);
                     return;
-                }
+                } 
                 const result = await response.json();
 
                 if (result.status === 'SUCCESS') {
@@ -93,6 +94,7 @@ const App: React.FC = () => {
                 addToast('No se pudo verificar el estado de la tarea.', 'error');
             }
         }, 5000); // Sondear cada 5 segundos
+ 
     };
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
@@ -116,10 +118,12 @@ const App: React.FC = () => {
     };
 
     const handleExcelFileLoad = async (file: File) => {
+ 
         await handleFileLoad(file);
     };
 
     const handleMongoDbConnect = async (uri: string, db: string, collection: string) => {
+ 
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a MongoDB...' } });
         try {
             const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-mongodb`, {
@@ -161,9 +165,12 @@ const App: React.FC = () => {
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
+  main
     };
 
     const handleSheetSelection = async (sheetName: string, file: File | null) => {
+        // La nueva lógica de backend maneja la selección de hojas automáticamente.
+        // Simplemente pasamos el archivo al manejador de carga principal.
         if (!file) return;
         setSheetModalState({ isOpen: false, file: null, sheetNames: [] });
         await handleFileLoad(file);
@@ -258,6 +265,7 @@ const App: React.FC = () => {
     };
 
     const handleMultiFileLoad = async (files: FileList) => {
+ 
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Subiendo archivos...' } });
         const formData = new FormData();
         Array.from(files).forEach(file => {
@@ -280,6 +288,7 @@ const App: React.FC = () => {
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
+ 
     };
 
     return (
