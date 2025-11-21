@@ -1,0 +1,15 @@
+backend-1  | /usr/local/lib/python3.12/site-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+backend-1  |   import pkg_resources  # noqa: TID251
+backend-1  | 2025-11-21 00:14:22,215 - INFO - generated new fontManager
+backend-1  | 2025-11-21 00:14:23,631 - WARNING - Could not initialize preferred model 'analysis'. Falling back.
+backend-1  | INFO:     Started server process [1]
+backend-1  | INFO:     Waiting for application startup.
+backend-1  | INFO:     Application startup complete.
+backend-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+backend-1  | ADVERTENCIA: La variable de entorno GOOGLE_API_KEY no está configurada. El proxy de Gemini no funcionará.
+backend-1  | INFO:     172.18.0.7:41798 - "GET /metrics HTTP/1.1" 200 OK
+backend-1  | INFO:     172.18.0.7:46726 - "GET /metrics HTTP/1.1" 200 OK
+backend-1  | INFO:     172.18.0.7:34476 - "GET /metrics HTTP/1.1" 200 OK
+backend-1  | INFO:     172.18.0.7:42836 - "GET /metrics HTTP/1.1" 200 OK
+backend-1  | INFO:     172.18.0.7:33350 - "GET /metrics HTTP/1.1" 200 OK
+backend-1  | INFO:     172.18.0.7:60682 - "GET /metrics HTTP/1.1" 200 OK

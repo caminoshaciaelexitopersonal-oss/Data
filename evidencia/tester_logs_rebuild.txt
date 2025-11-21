@@ -1,0 +1,184 @@
+tester-1  | ============================= test session starts ==============================
+tester-1  | platform linux -- Python 3.12.12, pytest-8.2.2, pluggy-1.6.0
+tester-1  | rootdir: /app
+tester-1  | plugins: anyio-3.7.1
+tester-1  | collected 44 items
+tester-1  |
+tester-1  | backend/tests/test_anomaly_service.py ....                               [  9%]
+tester-1  | backend/tests/test_audit.py ...                                          [ 15%]
+tester-1  | backend/tests/test_data_quality_service.py .......                       [ 31%]
+tester-1  | backend/tests/test_eda_intelligent_service.py ......                     [ 45%]
+tester-1  | backend/tests/test_intelligent_merge_wpa.py ....                         [ 54%]
+tester-1  | backend/tests/test_llm_router.py ........                                [ 72%]
+tester-1  | backend/tests/test_new_wpa_flows.py ...                                  [ 79%]
+tester-1  | backend/tests/test_pipeline_selector.py ...                              [ 86%]
+tester-1  | backend/tests/test_pre_analysis.py ...                                   [ 93%]
+tester-1  | backend/tests/test_prompt_tracer_service.py ..                           [ 97%]
+tester-1  | backend/tests/test_wpa.py F                                              [100%]
+tester-1  |
+tester-1  | =================================== FAILURES ===================================
+tester-1  | _______________________ test_wpa_auto_analysis_endpoint ________________________
+tester-1  |
+tester-1  | mock_wpa_service = <MagicMock name='WpaAutoAnalysisService' id='140479726340384'>
+tester-1  | client = <starlette.testclient.TestClient object at 0x7fc3fc4b7650>
+tester-1  |
+tester-1  |     @patch('backend.wpa.auto_analysis.api.WpaAutoAnalysisService')
+tester-1  |     def test_wpa_auto_analysis_endpoint(mock_wpa_service, client):
+tester-1  |         """
+tester-1  |         Tests the /wpa/auto-analysis endpoint.
+tester-1  |         Mocks the entire WPA service to test the API layer and orchestration call.
+tester-1  |         """
+tester-1  |         # Configure the mock to return a valid EDA report
+tester-1  |         mock_instance = mock_wpa_service.return_value
+tester-1  |         mock_instance.execute.return_value = SAMPLE_EDA_REPORT
+tester-1  |
+tester-1  |         # Define the request payload
+tester-1  |         request_data = {
+tester-1  |             "source_type": "file",
+tester-1  |             "data": [{"col1": 1, "col2": "a"}],
+tester-1  |             "etl_steps": [{"action": "rename", "parameters": {"columns": {"col1": "new_col"}}}]
+tester-1  |         }
+tester-1  |
+tester-1  |         # Make the request
+tester-1  |         response = client.post("/wpa/auto-analysis", json=request_data)
+tester-1  |
+tester-1  |         # Assertions
+tester-1  | >       assert response.status_code == 200
+tester-1  | E       assert 422 == 200
+tester-1  | E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+tester-1  |
+tester-1  | backend/tests/test_wpa.py:32: AssertionError
+tester-1  | ----------------------------- Captured stderr call -----------------------------
+tester-1  | 2025-11-21 00:14:26,773 - INFO - HTTP Request: POST http://testserver/wpa/auto-analysis "HTTP/1.1 422 Unprocessable Entity"
+tester-1  | ------------------------------ Captured log call -------------------------------
+tester-1  | INFO     httpx:_client.py:1026 HTTP Request: POST http://testserver/wpa/auto-analysis "HTTP/1.1 422 Unprocessable Entity"
+tester-1  | =============================== warnings summary ===============================
+tester-1  | <frozen importlib._bootstrap>:488
+tester-1  |   <frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.MessageMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+tester-1  |
+tester-1  | <frozen importlib._bootstrap>:488
+tester-1  |   <frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.ScalarMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/utils/requirements_utils.py:20
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+tester-1  |     import pkg_resources  # noqa: TID251
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/pkg_resources/__init__.py:3146
+tester-1  |   /usr/local/lib/python3.12/site-packages/pkg_resources/__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('google')`.
+tester-1  |   Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+tester-1  |     declare_namespace(pkg)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:61
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:61: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("togetherai_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:75
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:75: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("cohere_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:83
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("ai21labs_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:92
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:92: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("mosaicml_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:122
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:122: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("openai_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:179
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:179: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("anthropic_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:187
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("palm_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:227
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:227: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("mistral_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:308
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:308: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("provider", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:329
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:329: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("config", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:369
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:369: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("name")
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:379
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:379: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("model", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:390
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:390: PydanticDeprecatedSince20: Pydantic V1 style `@root_validator` validators are deprecated. You should migrate to Pydantic V2 style `@model_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @root_validator(skip_on_failure=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:412
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:412: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("route_type", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:418
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:418: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("limit", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:468
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:468: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     class Route(ConfigModel):
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/shap/plots/colors/_colorconv.py:819: 909 warnings
+tester-1  |   /usr/local/lib/python3.12/site-packages/shap/plots/colors/_colorconv.py:819: DeprecationWarning: Converting `np.inexact` or `np.floating` to a dtype is deprecated. The current result is `float64` which is not strictly correct.
+tester-1  |     if np.issubdtype(dtype_in, np.dtype(dtype).type):
+tester-1  |
+tester-1  | backend/mcp/schemas.py:39
+tester-1  |   /app/backend/mcp/schemas.py:39: PydanticDeprecatedSince20: The `update_forward_refs` method is deprecated; use `model_rebuild` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     Session.update_forward_refs()
+tester-1  |
+tester-1  | backend/mcp/schemas.py:40
+tester-1  |   /app/backend/mcp/schemas.py:40: PydanticDeprecatedSince20: The `update_forward_refs` method is deprecated; use `model_rebuild` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     Job.update_forward_refs()
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_modeling_train_endpoint
+tester-1  | backend/tests/test_wpa.py::test_wpa_auto_analysis_endpoint
+tester-1  |   /usr/local/lib/python3.12/site-packages/httpx/_client.py:680: DeprecationWarning: The 'app' shortcut is now deprecated. Use the explicit style 'transport=WSGITransport(app=...)' instead.
+tester-1  |     warnings.warn(message, DeprecationWarning)
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py: 31 warnings
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:72: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
+tester-1  |     pd.to_datetime(series, errors='raise'); return "datetime"
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_conflict_resolution_with_hierarchy_and_frequency
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_quality_report_bug_fix
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:203: DeprecationWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+tester-1  |     merged_df = concatenated_df.groupby(id_column, group_keys=False).apply(self._resolve_conflicts_for_group)
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_quality_report_bug_fix
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:318: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+tester-1  |     "report_generated_at": datetime.utcnow().isoformat(),
+tester-1  |
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_modeling_train_endpoint
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_modeling_train_endpoint
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_report_generation_endpoint
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_report_generation_endpoint
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_db_ingestion_endpoint
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_db_ingestion_endpoint
+tester-1  |   /app/backend/audit/service.py:40: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+tester-1  |     "timestamp": datetime.utcnow().isoformat() + "Z",
+tester-1  |
+tester-1  | backend/tests/test_prompt_tracer_service.py::test_log_prompt_creates_file_and_writes_log
+tester-1  |   /app/backend/services/prompt_tracer.py:90: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+tester-1  |     "timestamp_utc": datetime.utcnow().isoformat(),
+tester-1  |
+tester-1  | -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+tester-1  | =========================== short test summary info ============================
+tester-1  | FAILED backend/tests/test_wpa.py::test_wpa_auto_analysis_endpoint - assert 42...
+tester-1  | ================== 1 failed, 43 passed, 977 warnings in 2.67s ==================

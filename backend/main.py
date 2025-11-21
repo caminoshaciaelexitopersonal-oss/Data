@@ -54,6 +54,11 @@ app = configure_app(app)
 def read_root():
     return {"message": "SADI Backend is running."}
 
+@app.get("/health", status_code=200)
+def health_check():
+    """Endpoint for health checks."""
+    return {"status": "ok"}
+
 # The following block is for running the app directly with uvicorn
 # during development. It won't be executed when imported.
 if __name__ == "__main__":

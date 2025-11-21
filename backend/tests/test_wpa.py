@@ -20,9 +20,11 @@ def test_wpa_auto_analysis_endpoint(mock_wpa_service, client):
 
     # Define the request payload
     request_data = {
+            "job_id": "a4b5ea8d-6039-4d0d-971d-6c825920aa4f",
+            "user_id": "test_user",
         "source_type": "file",
         "data": [{"col1": 1, "col2": "a"}],
-        "etl_steps": [{"action": "rename", "parameters": {"columns": {"col1": "new_col"}}}]
+            "etl_steps": [{"action": "rename", "params": {"columns": {"col1": "new_col"}}}]
     }
 
     # Make the request

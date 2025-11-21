@@ -1,9 +1,39 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ClassificationResult, RegressionResult, ClassificationMetric, ModelComparisonResultItem, ClusterResult } from "../types";
 
-const getAiClient = (): GoogleGenAI => {
-    // Always create a new instance to ensure it uses the latest API key from the environment.
-    return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+// URL base de la API, asumida como variable de entorno inyectada.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+/**
+ * Llama al endpoint proxy seguro del backend para interactuar con Gemini.
+ * @param prompt El prompt a enviar a la IA.
+ * @returns El texto de respuesta de la IA.
+ */
+const callGeminiProxy = async (prompt: string): Promise<string> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/mpa/ml/proxy/gemini`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || "Error en la comunicación con el servicio de IA del backend.");
+        }
+
+        const data = await response.json();
+        return data.text;
+
+    } catch (error) {
+        console.error("Error calling Gemini proxy:", error);
+        if (error instanceof Error) {
+            // Re-lanzar el error para que la UI pueda manejarlo.
+            throw new Error(`Análisis de IA fallido: ${error.message}`);
+        }
+        throw new Error("Análisis de IA fallido: Ocurrió un error desconocido.");
+    }
 };
 
 
@@ -52,25 +82,7 @@ export const analyzeClassificationResults = async (
         4.  **Conclusión y Recomendaciones:** En 1 o 2 frases, ¿cuál es la conclusión principal y qué recomiendas para mejorar el modelo en base al contexto?
     `;
 
-    try {
-        const client = getAiClient();
-        const response = await client.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        if (error instanceof Error) {
-            if (error.message.includes('API key')) {
-                 throw new Error("Análisis de IA fallido: La clave API no es válida o no está configurada.");
-            }
-            if (error.message.includes('Requested entity was not found')) {
-                throw new Error("INVALID_KEY"); // Special message to be caught by UI
-            }
-        }
-        throw new Error("Análisis de IA fallido: No se pudo conectar con el servicio.");
-    }
+    return callGeminiProxy(prompt);
 };
 
 
@@ -104,25 +116,7 @@ export const analyzeRegressionResults = async (
         4.  **Conclusión y Recomendaciones:** ¿Cuál es la conclusión principal? ¿Qué sugerirías para mejorar el modelo?
     `;
 
-    try {
-        const client = getAiClient();
-        const response = await client.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        if (error instanceof Error) {
-            if (error.message.includes('API key')) {
-                 throw new Error("Análisis de IA fallido: La clave API no es válida o no está configurada.");
-            }
-            if (error.message.includes('Requested entity was not found')) {
-                throw new Error("INVALID_KEY");
-            }
-        }
-        throw new Error("Análisis de IA fallido: No se pudo conectar con el servicio.");
-    }
+    return callGeminiProxy(prompt);
 };
 
 
@@ -151,28 +145,11 @@ export const analyzeModelComparison = async (
         3.  **Conclusión Final:** Proporciona una recomendación clara y concisa para un público no técnico.
     `;
 
-    try {
-        const client = getAiClient();
-        const response = await client.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        if (error instanceof Error) {
-            if (error.message.includes('API key')) {
-                 throw new Error("Análisis de IA fallido: La clave API no es válida o no está configurada.");
-            }
-            if (error.message.includes('Requested entity was not found')) {
-                throw new Error("INVALID_KEY");
-            }
-        }
-        throw new Error("Análisis de IA fallido: No se pudo conectar con el servicio.");
-    }
+    return callGeminiProxy(prompt);
 };
 
-
+// Nota: La función analyzeClusterResults requiere un endpoint proxy multimodal que pueda manejar imágenes,
+// lo cual no está implementado en esta versión. Se deja la estructura como placeholder.
 export const analyzeClusterResults = async (
     chartImageBase64: string,
     clusterResult: ClusterResult,
@@ -180,59 +157,8 @@ export const analyzeClusterResults = async (
     datasetMetadata: string
 ): Promise<string> => {
     
-    const uniqueClusters = [...new Set(clusterResult.assignments)];
-    const noisePoints = clusterResult.assignments.filter(a => a === -1).length;
-    const hasNoise = noisePoints > 0;
+    console.warn("La función 'analyzeClusterResults' requiere un endpoint multimodal que no está implementado en el proxy actual.");
 
-    const prompt = `
-        Eres un experto analista de datos. Tu tarea es analizar los resultados de un algoritmo de clustering.
-
-        **Contexto del Problema y Objetivos del Usuario:**
-        ${problemContext || 'No proporcionado.'}
-
-        **Metadatos del Dataset:**
-        ${datasetMetadata || 'No proporcionado.'}
-
-        **Resultados del Clustering (${clusterResult.algorithm}):**
-        - **Número de Clústeres Identificados:** ${uniqueClusters.filter(c => c !== -1).length}
-        - **Características Utilizadas:** ${clusterResult.featureNames.join(', ')}
-        ${hasNoise ? `- Se identificaron ${noisePoints} puntos como ruido (no pertenecen a ningún clúster).` : ''}
-
-        **Análisis Solicitado:**
-        1.  **Interpretación del Gráfico:** Observa la imagen adjunta. Describe los clústeres que ves. ¿Están bien separados? ¿Son densos o dispersos? ¿Hay algún patrón visual obvio?
-        2.  **Perfil de los Clústeres:** Basado en el gráfico y los datos, intenta describir cada clúster. Por ejemplo, "El Clúster 1 (color X) parece agrupar puntos con valores altos en [Característica A] y bajos en [Característica B]".
-        3.  **Conexión con el Contexto:** Relaciona los clústeres encontrados con el contexto del problema proporcionado. ¿Qué podrían significar estos grupos? (ej. "Estos clústeres podrían representar diferentes segmentos de clientes...").
-        4.  **Conclusión y Siguientes Pasos:** Ofrece una conclusión general. ¿Fue útil el clustering? ¿Qué sugerirías hacer a continuación?
-
-        Proporciona el análisis en formato Markdown.
-    `;
-
-    try {
-        const client = getAiClient();
-        const imagePart = {
-            inlineData: {
-                mimeType: 'image/jpeg',
-                data: chartImageBase64,
-            },
-        };
-        const textPart = { text: prompt };
-
-        const response: GenerateContentResponse = await client.models.generateContent({
-            model: 'gemini-2.5-flash-image', // Using a multimodal model
-            contents: { parts: [textPart, imagePart] },
-        });
-
-        return response.text;
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        if (error instanceof Error) {
-            if (error.message.includes('API key')) {
-                throw new Error("Análisis de IA fallido: La clave API no es válida o no está configurada.");
-            }
-            if (error.message.includes('Requested entity was not found')) {
-                throw new Error("INVALID_KEY");
-            }
-        }
-        throw new Error("Análisis de IA fallido: No se pudo conectar con el servicio.");
-    }
+    // Devolvemos un mensaje informativo en lugar de intentar una llamada que fallará.
+    return Promise.resolve("## Análisis de Clustering no disponible\n\nEsta funcionalidad requiere una actualización del backend para soportar análisis de imágenes a través del proxy seguro.");
 };

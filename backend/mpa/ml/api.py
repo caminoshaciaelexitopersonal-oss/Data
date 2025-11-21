@@ -1,4 +1,6 @@
 
+import os
+import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List, Dict, Any
 import pandas as pd
@@ -6,12 +8,38 @@ import pandas as pd
 from backend.services.anomaly_service import AnomalyService, get_anomaly_service
 from pydantic import BaseModel
 
+# --- Gemini Proxy Configuration ---
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("ADVERTENCIA: La variable de entorno GOOGLE_API_KEY no está configurada. El proxy de Gemini no funcionará.")
+
+class GeminiProxyRequest(BaseModel):
+    prompt: str
+
 class AnomalyRequest(BaseModel):
     data: List[Dict[str, Any]]
     columns: List[str]
     contamination: float = 0.1
 
 router = APIRouter(prefix="/mpa/ml", tags=["MPA - Machine Learning"])
+
+@router.post("/proxy/gemini")
+async def gemini_proxy(request: GeminiProxyRequest):
+    """
+    Secure proxy endpoint to interact with the Gemini API.
+    The API key is handled on the server-side.
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="El servicio de IA no está configurado en el servidor.")
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(request.prompt)
+        return {"text": response.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al contactar el servicio de IA: {str(e)}")
+
 
 @router.post("/anomaly-detection", response_model=Dict[str, Any])
 def run_anomaly_detection(
