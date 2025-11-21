@@ -41,6 +41,12 @@ async def chat_agent(
     agent_executor = Depends(get_agent_executor),
     tracer_service: PromptTracerService = Depends(get_prompt_tracer_service)
 ):
+    if agent_executor is None:
+        raise HTTPException(
+            status_code=503,
+            detail="El agente de IA no está disponible. Verifique la configuración de la clave API del LLM."
+        )
+
     session_id = request.session_id or str(uuid.uuid4())
     try:
         # 1. Crear un DataFrame de muestra para el pre-análisis
@@ -65,7 +71,13 @@ async def chat_agent(
         # fallback defensivo
         return {"output": str(result)}
     except Exception as e:
-        tracer_service.log_trace(session_id, request.message, {"error": str(e)})
+        tracer_service.log_prompt(
+            session_id=session_id,
+            prompt=request.message,
+            response={"error": str(e)},
+            model_used="error_handler",
+            execution_time=0.0
+        )
         raise HTTPException(status_code=500, detail=f"Error en el agente de chat: {e}")
 
 @router.get("/export/code")

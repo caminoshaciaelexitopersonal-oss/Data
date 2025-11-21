@@ -32,12 +32,14 @@ Thought:{agent_scratchpad}'''
 prompt = PromptTemplate.from_template(template)
 
 # Create the agent
-llm = get_llm_for_agent("analysis")
-tools = get_tools()
-agent = create_react_agent(llm, tools, prompt)
-
-# Create the Agent Executor
-agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+try:
+    llm = get_llm_for_agent("analysis")
+    tools = get_tools()
+    agent = create_react_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+except RuntimeError as e:
+    print(f"WARNING: Agent could not be initialized: {e}")
+    agent_executor = None
 
 # --- App Creation ---
 # The app is now created and configured in the app_factory.
