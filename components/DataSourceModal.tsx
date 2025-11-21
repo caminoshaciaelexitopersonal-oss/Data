@@ -183,12 +183,13 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv,.xls,.xlsx,.json" />
 
-                        <button onClick={() => multiFileInputRef.current?.click()} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-teal-500/20 rounded-lg transition-colors border border-gray-600 hover:border-teal-500">
+                        {/* @TODO: Re-enable when backend endpoint /upload/multi is available. */}
+                        {/* <button onClick={() => multiFileInputRef.current?.click()} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-teal-500/20 rounded-lg transition-colors border border-gray-600 hover:border-teal-500">
                             <UploadIcon className="w-10 h-10 mb-2 text-teal-400" />
                             <span className="text-md font-semibold text-white">Cargar Múltiples Archivos</span>
                             <span className="text-xs text-slate-400">.zip, .tar.gz</span>
                         </button>
-                        <input type="file" multiple ref={multiFileInputRef} onChange={handleMultiFileChange} className="hidden" />
+                        <input type="file" multiple ref={multiFileInputRef} onChange={handleMultiFileChange} className="hidden" /> */}
 
                         <button onClick={() => setSourceType('db')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-purple-500/20 rounded-lg transition-colors border border-gray-600 hover:border-purple-500">
                             <DatabaseIcon className="w-10 h-10 mb-2 text-purple-400" />
@@ -196,17 +197,19 @@ export const DataSourceModal: React.FC<DataSourceModalProps> = ({ onFileLoad, on
                             <span className="text-xs text-slate-400">PostgreSQL, etc.</span>
                         </button>
 
-                        <button onClick={() => setSourceType('mongodb')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-green-500/20 rounded-lg transition-colors border border-gray-600 hover:border-green-500">
+                        {/* @TODO: Re-enable when backend endpoint /load-from-mongodb/ is available. */}
+                        {/* <button onClick={() => setSourceType('mongodb')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-green-500/20 rounded-lg transition-colors border border-gray-600 hover:border-green-500">
                             <MongoDbIcon className="w-10 h-10 mb-2 text-green-400" />
                             <span className="text-md font-semibold text-white">MongoDB</span>
                             <span className="text-xs text-slate-400">Conectar a una colección</span>
-                        </button>
+                        </button> */}
 
-                        <button onClick={() => setSourceType('s3')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-orange-500/20 rounded-lg transition-colors border border-gray-600 hover:border-orange-500">
+                        {/* @TODO: Re-enable when backend endpoint /load-from-s3/ is available. */}
+                        {/* <button onClick={() => setSourceType('s3')} className="flex flex-col items-center justify-center p-6 bg-gray-700/50 hover:bg-orange-500/20 rounded-lg transition-colors border border-gray-600 hover:border-orange-500">
                             <AwsS3Icon className="w-10 h-10 mb-2 text-orange-400" />
                             <span className="text-md font-semibold text-white">Amazon S3</span>
                             <span className="text-xs text-slate-400">Cargar desde un bucket</span>
-                        </button>
+                        </button> */}
                     </div>
                 ) : (
                     <div>

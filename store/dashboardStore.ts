@@ -50,7 +50,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => {
         fetchVisualizations: async () => {
             set({ loading: true, error: null });
             try {
-                const response = await fetch(`${API_BASE_URL}/api/visualizations`);
+            const response = await fetch(`${API_BASE_URL}/api/v1/visualizations`);
                 if (!response.ok) {
                     throw new Error("No se pudieron cargar las visualizaciones.");
                 }
