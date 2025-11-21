@@ -1,0 +1,27 @@
+worker-1  | Usage: celery [OPTIONS] COMMAND [ARGS]...
+worker-1  | Try 'celery --help' for help.
+worker-1  |
+worker-1  | Error: Invalid value for '-A' / '--app':
+worker-1  | Unable to load celery application.
+worker-1  | While trying to load the module celery_worker.celery_app the following error occurred:
+worker-1  | Traceback (most recent call last):
+worker-1  |   File "/usr/local/lib/python3.12/site-packages/celery/bin/celery.py", line 58, in convert
+worker-1  |     return find_app(value)
+worker-1  |            ^^^^^^^^^^^^^^^
+worker-1  |   File "/usr/local/lib/python3.12/site-packages/celery/app/utils.py", line 383, in find_app
+worker-1  |     sym = symbol_by_name(app, imp=imp)
+worker-1  |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  |   File "/usr/local/lib/python3.12/site-packages/kombu/utils/imports.py", line 59, in symbol_by_name
+worker-1  |     module = imp(module_name, package=package, **kwargs)
+worker-1  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  |   File "/usr/local/lib/python3.12/site-packages/celery/utils/imports.py", line 109, in import_from_cwd
+worker-1  |     return imp(module, package=package)
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  |   File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+worker-1  |     return _bootstrap._gcd_import(name[level:], package, level)
+worker-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+worker-1  |   File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+worker-1  |   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+worker-1  |   File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+worker-1  | ModuleNotFoundError: No module named 'celery_worker'
+worker-1  |

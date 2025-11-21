@@ -1,0 +1,9 @@
+NAME               IMAGE              COMMAND                  SERVICE      CREATED              STATUS                             PORTS
+app-backend-1      app-backend        "python -m backend.m…"   backend      2 minutes ago        Up 40 seconds (health: starting)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+app-frontend-1     app-frontend       "/docker-entrypoint.…"   frontend     About a minute ago   Up 39 seconds                      0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+app-grafana-1      grafana/grafana    "/run.sh"                grafana      57 seconds ago       Up 38 seconds                      0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+app-mlflow-1       python:3.12-slim   "sh -c 'pip install …"   mlflow       2 minutes ago        Up 41 seconds                      0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp
+app-prometheus-1   prom/prometheus    "/bin/prometheus --c…"   prometheus   About a minute ago   Up 39 seconds                      0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+app-redis-1        redis:alpine       "docker-entrypoint.s…"   redis        2 minutes ago        Up 41 seconds                      0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+app-tester-1       app-tester         "python -m pytest ba…"   tester       2 minutes ago        Exited (0) 19 seconds ago
+app-worker-1       app-worker         "celery -A backend.c…"   worker       2 minutes ago        Up 40 seconds                      8000/tcp

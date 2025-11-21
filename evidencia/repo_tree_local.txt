@@ -1,0 +1,288 @@
+.
+├── .env.development
+├── .git
+│   ├── HEAD
+│   ├── ORIG_HEAD
+│   ├── config
+│   ├── description
+│   ├── hooks
+│   │   ├── applypatch-msg.sample
+│   │   ├── commit-msg.sample
+│   │   ├── fsmonitor-watchman.sample
+│   │   ├── post-update.sample
+│   │   ├── pre-applypatch.sample
+│   │   ├── pre-commit.sample
+│   │   ├── pre-merge-commit.sample
+│   │   ├── pre-push.sample
+│   │   ├── pre-rebase.sample
+│   │   ├── pre-receive.sample
+│   │   ├── prepare-commit-msg.sample
+│   │   ├── push-to-checkout.sample
+│   │   ├── sendemail-validate.sample
+│   │   └── update.sample
+│   ├── index
+│   ├── info
+│   │   └── exclude
+│   ├── logs
+│   │   ├── HEAD
+│   │   └── refs
+│   │       ├── heads
+│   │       │   └── main
+│   │       └── remotes
+│   │           └── origin
+│   │               └── HEAD
+│   ├── objects
+│   │   ├── info
+│   │   └── pack
+│   │       ├── pack-b0f369ca5224cf4083b39a7f74a2e2fc1d51ed5e.idx
+│   │       ├── pack-b0f369ca5224cf4083b39a7f74a2e2fc1d51ed5e.pack
+│   │       └── pack-b0f369ca5224cf4083b39a7f74a2e2fc1d51ed5e.rev
+│   ├── packed-refs
+│   ├── refs
+│   │   ├── heads
+│   │   │   └── main
+│   │   ├── remotes
+│   │   │   └── origin
+│   │   │       └── HEAD
+│   │   └── tags
+│   └── shallow
+├── .gitignore
+├── ANALISIS_IMPACTO_BIND_MOUNTS.md
+├── ANALISIS_SEGURIDAD_MIDDLEWARE.md
+├── API_DOCS.md
+├── ARCHITECTURE.md
+├── AUDIT_MISSING_SYMBOLS.md
+├── App.tsx
+├── Dockerfile
+├── IMPORT_AUDIT.md
+├── INFORME_INTEROPERABILIDAD_FASE_3.md
+├── MCP_DESIGN.md
+├── README.md
+├── WPA_FLOWS.md
+├── backend
+│   ├── Dockerfile
+│   ├── __init__.py
+│   ├── agent
+│   │   └── pre_analysis.py
+│   ├── app
+│   │   ├── __init__.py
+│   │   ├── api
+│   │   │   ├── core.py
+│   │   │   └── routes_code_viewer.py
+│   │   ├── etl_audit.py
+│   │   ├── etl_providers
+│   │   │   ├── __init__.py
+│   │   │   ├── api_ingestor.py
+│   │   │   ├── csv_loader.py
+│   │   │   ├── excel_loader.py
+│   │   │   ├── json_loader.py
+│   │   │   ├── jsonl_loader.py
+│   │   │   ├── loader_archive.py
+│   │   │   ├── loader_jsonl.py
+│   │   │   ├── loader_tsv.py
+│   │   │   ├── parquet_loader.py
+│   │   │   ├── sql_ingestor.py
+│   │   │   ├── tsv_loader.py
+│   │   │   └── yaml_loader.py
+│   │   ├── etl_tasks.py
+│   │   ├── export
+│   │   │   └── code_exporter.py
+│   │   └── services
+│   │       ├── audit_service.py
+│   │       ├── celery_tasks.py
+│   │       ├── compression_handler.py
+│   │       ├── data_exporter.py
+│   │       ├── etl_multisource_service.py
+│   │       ├── etl_service.py
+│   │       └── normalization_pipeline.py
+│   ├── app_factory.py
+│   ├── audit
+│   │   ├── __init__.py
+│   │   └── service.py
+│   ├── audit_logger.py
+│   ├── celery_app.py
+│   ├── celery_worker.py
+│   ├── etl
+│   │   └── __init__.py
+│   ├── legacy_tools.py
+│   ├── llm
+│   │   ├── __init__.py
+│   │   └── llm_router.py
+│   ├── logger.py
+│   ├── main.py
+│   ├── mcp
+│   │   ├── api.py
+│   │   ├── schemas.py
+│   │   └── service.py
+│   ├── middleware
+│   │   └── hardening_middleware.py
+│   ├── mpa
+│   │   ├── eda
+│   │   │   ├── __init__.py
+│   │   │   ├── api.py
+│   │   │   └── service.py
+│   │   ├── etl
+│   │   │   ├── __init__.py
+│   │   │   └── service.py
+│   │   ├── ingestion
+│   │   │   ├── __init__.py
+│   │   │   ├── api.py
+│   │   │   └── service.py
+│   │   ├── ml
+│   │   │   └── api.py
+│   │   └── quality
+│   │       └── api.py
+│   ├── pipeline.py
+│   ├── report_generator.py
+│   ├── requirements.in
+│   ├── requirements.lock
+│   ├── requirements.txt
+│   ├── requirements.txt.bak
+│   ├── routers
+│   │   ├── eda_recalculate_api.py
+│   │   ├── export_api.py
+│   │   ├── pipelines_api.py
+│   │   ├── prompts_api.py
+│   │   └── validation_api.py
+│   ├── schemas.py
+│   ├── services
+│   │   ├── anomaly_service.py
+│   │   ├── data_quality_service.py
+│   │   ├── eda_intelligent_service.py
+│   │   ├── environment_exporter.py
+│   │   ├── pca_service.py
+│   │   ├── pipeline_selector.py
+│   │   ├── prompt_tracer.py
+│   │   └── validation_rules.py
+│   ├── temp_reqs.txt
+│   ├── tests
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_anomaly_service.py
+│   │   ├── test_audit.py
+│   │   ├── test_data_quality_service.py
+│   │   ├── test_eda_intelligent_service.py
+│   │   ├── test_intelligent_merge_wpa.py
+│   │   ├── test_llm_router.py
+│   │   ├── test_new_wpa_flows.py
+│   │   ├── test_pipeline_selector.py
+│   │   ├── test_pre_analysis.py
+│   │   ├── test_prompt_tracer_service.py
+│   │   └── test_wpa.py
+│   ├── tests_advanced
+│   │   └── test_advanced_export.py
+│   ├── tools
+│   │   ├── __init__.py
+│   │   └── main_tools.py
+│   ├── visualizations.py
+│   └── wpa
+│       ├── __init__.py
+│       ├── auto_analysis
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   └── service.py
+│       ├── db_ingestion
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   ├── schemas.py
+│       │   └── service.py
+│       ├── intelligent_merge
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   ├── schemas.py
+│       │   └── service.py
+│       ├── modeling
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   ├── schemas.py
+│       │   └── service.py
+│       ├── report_generation
+│       │   ├── __init__.py
+│       │   ├── api.py
+│       │   ├── schemas.py
+│       │   └── service.py
+│       ├── schemas.py
+│       └── session_manager.py
+├── changes.diff
+├── components
+│   ├── ChatView.tsx
+│   ├── CodeViewerModal.tsx
+│   ├── DataSourceModal.tsx
+│   ├── Toast.tsx
+│   ├── VisualAnalyticsBoard.tsx
+│   └── icons.tsx
+├── create_excel.py
+├── create_multi_sheet_excel.py
+├── data
+│   ├── exerciseData.ts
+│   ├── logs
+│   │   └── audit_log.json
+│   └── processed
+│       └── code_blocks
+│           └── sample_job_123
+│               └── load_data_1763153095.py
+├── docker-compose.yml
+├── docs
+│   └── v2
+│       ├── architecture.md
+│       ├── functional_manual.md
+│       └── technical_manual.md
+├── evidencia
+│   └── repo_tree_local.txt
+├── features
+│   ├── data-quality
+│   │   ├── MissingValuesHeatmap.tsx
+│   │   ├── QualityIssuesList.tsx
+│   │   └── QualityScoreCard.tsx
+│   ├── interactive-filters
+│   │   ├── CrossFilterEngine.ts
+│   │   ├── FilterBadge.tsx
+│   │   └── MultiFilterPanel.tsx
+│   └── prompt-trace
+│       └── PromptTraceModal.tsx
+├── frontend
+│   └── tests
+│       └── playwright
+│           └── example.spec.ts
+├── index.html
+├── index.tsx
+├── kubernetes
+│   ├── deployment.yml
+│   └── service.yml
+├── metadata.json
+├── missing_endpoints.md
+├── multi_sheet_test.xlsx
+├── package-lock.json
+├── package.json
+├── pip_check_log.txt
+├── pip_install_log.txt
+├── prometheus.yml
+├── pytest_test_audit_output.txt
+├── pytest_test_etl_output.txt
+├── reducer.ts
+├── services
+│   ├── analysisWorker.js
+│   ├── analysisWorker.ts
+│   ├── chartUtils.ts
+│   ├── dataService.ts
+│   ├── dbscanService.ts
+│   ├── geminiService.ts
+│   ├── hierarchicalClusteringService.ts
+│   ├── kmeansService.ts
+│   └── machineLearningService.ts
+├── store
+│   └── dashboardStore.ts
+├── test-failure-page.html
+├── test-failure-screenshot.png
+├── test-results
+│   └── .last-run.json
+├── test_data.xlsx
+├── tests
+│   ├── e2e.spec.ts
+│   └── verification_scripts
+│       └── e2e_file_upload_test.py
+├── tsconfig.json
+├── types.ts
+└── vite.config.ts
+
+68 directories, 218 files
