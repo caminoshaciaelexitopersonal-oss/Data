@@ -7,6 +7,7 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard'; // Importar PVA
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons'; // Importar ChartIcon
+import { QualityReportPayloadSchema, ChatAgentPayloadSchema } from './frontend/src/validation/apiSchemas';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -99,10 +100,11 @@ const App: React.FC = () => {
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
         try {
+            QualityReportPayloadSchema.parse(data); // Validar payload
             const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data }),
+                body: JSON.stringify(data),
             });
             if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
 
@@ -240,14 +242,16 @@ const App: React.FC = () => {
             throw new Error("No hay datos cargados. Por favor, carga un archivo o conéctate a una base de datos primero.");
         }
         try {
+            const payload = {
+                message: message,
+                data: state.processedData,
+                llm_preference: llmPreference
+            };
+            ChatAgentPayloadSchema.parse(payload); // Validar payload
             const response = await fetch(`${API_BASE_URL}/api/v1/chat/agent/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: message,
-                    data: state.processedData,
-                    llm_preference: llmPreference
-                }),
+                body: JSON.stringify(payload),
             });
             if (!response.ok) throw new Error((await response.json()).detail);
             const agentResponse = await response.json();

@@ -9,7 +9,7 @@ router = APIRouter(prefix="/mpa/quality", tags=["MPA - Data Quality"])
 
 @router.post("/report", response_model=Dict[str, Any])
 def get_quality_report(
-    data: List[Dict[str, Any]] = Body(...),
+    data: List[Dict[str, Any]] = Body(..., description="A list of data records to be analyzed."),
     service: DataQualityService = Depends(get_data_quality_service)
 ):
     """
