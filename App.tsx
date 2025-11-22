@@ -7,6 +7,9 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard'; // Importar PVA
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons'; // Importar ChartIcon
+import { paths } from "./frontend/types/api.d";
+
+type ReportPayload = paths["/mpa/quality/report"]["post"]["requestBody"]["content"]["application/json"];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -99,10 +102,11 @@ const App: React.FC = () => {
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
         try {
+            const reportPayload: ReportPayload = { data };
             const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data }),
+                body: JSON.stringify(reportPayload),
             });
             if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
 
