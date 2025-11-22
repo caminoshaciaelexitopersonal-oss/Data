@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.12, pytest-8.2.2, pluggy-1.6.0
+rootdir: /app
+plugins: anyio-4.11.0, langsmith-0.4.42
+collected 3 items
+
+backend/tests/test_audit.py ...                                          [100%]
+
+============================== 3 passed in 0.04s ===============================

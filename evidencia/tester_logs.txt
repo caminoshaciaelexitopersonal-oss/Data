@@ -1,0 +1,969 @@
+tester-1  | ============================= test session starts ==============================
+tester-1  | platform linux -- Python 3.12.12, pytest-8.2.2, pluggy-1.6.0
+tester-1  | rootdir: /app
+tester-1  | plugins: anyio-3.7.1
+tester-1  | collected 44 items
+tester-1  |
+tester-1  | backend/tests/test_anomaly_service.py ....                               [  9%]
+tester-1  | backend/tests/test_audit.py ...                                          [ 15%]
+tester-1  | backend/tests/test_data_quality_service.py .......                       [ 31%]
+tester-1  | backend/tests/test_eda_intelligent_service.py ......                     [ 45%]
+tester-1  | backend/tests/test_intelligent_merge_wpa.py ....                         [ 54%]
+tester-1  | backend/tests/test_llm_router.py ........                                [ 72%]
+tester-1  | backend/tests/test_new_wpa_flows.py FFF                                  [ 79%]
+tester-1  | backend/tests/test_pipeline_selector.py ...                              [ 86%]
+tester-1  | backend/tests/test_pre_analysis.py ...                                   [ 93%]
+tester-1  | backend/tests/test_prompt_tracer_service.py ..                           [ 97%]
+tester-1  | backend/tests/test_wpa.py F                                              [100%]
+tester-1  |
+tester-1  | =================================== FAILURES ===================================
+tester-1  | _______________________ test_wpa_modeling_train_endpoint _______________________
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  | >           return self.receive_nowait()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:98:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     def receive_nowait(self) -> T_co:
+tester-1  |         """
+tester-1  |         Receive the next item if it can be done without waiting.
+tester-1  |
+tester-1  |         :return: the received item
+tester-1  |         :raises ~anyio.ClosedResourceError: if this send stream has been closed
+tester-1  |         :raises ~anyio.EndOfStream: if the buffer is empty and this stream has been
+tester-1  |             closed from the sending end
+tester-1  |         :raises ~anyio.WouldBlock: if there are no items in the buffer and no tasks
+tester-1  |             waiting to send
+tester-1  |
+tester-1  |         """
+tester-1  |         if self._closed:
+tester-1  |             raise ClosedResourceError
+tester-1  |
+tester-1  |         if self._state.waiting_senders:
+tester-1  |             # Get the item from the next sender
+tester-1  |             send_event, item = self._state.waiting_senders.popitem(last=False)
+tester-1  |             self._state.buffer.append(item)
+tester-1  |             send_event.set()
+tester-1  |
+tester-1  |         if self._state.buffer:
+tester-1  |             return self._state.buffer.popleft()
+tester-1  |         elif not self._state.open_send_channels:
+tester-1  |             raise EndOfStream
+tester-1  |
+tester-1  | >       raise WouldBlock
+tester-1  | E       anyio.WouldBlock
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:93: WouldBlock
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | request = <starlette.requests.Request object at 0x7ff9299be7e0>
+tester-1  |
+tester-1  |     async def call_next(request: Request) -> Response:
+tester-1  |         app_exc: typing.Optional[Exception] = None
+tester-1  |         send_stream, recv_stream = anyio.create_memory_object_stream()
+tester-1  |
+tester-1  |         async def receive_or_disconnect() -> Message:
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             async with anyio.create_task_group() as task_group:
+tester-1  |
+tester-1  |                 async def wrap(func: typing.Callable[[], typing.Awaitable[T]]) -> T:
+tester-1  |                     result = await func()
+tester-1  |                     task_group.cancel_scope.cancel()
+tester-1  |                     return result
+tester-1  |
+tester-1  |                 task_group.start_soon(wrap, response_sent.wait)
+tester-1  |                 message = await wrap(request.receive)
+tester-1  |
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             return message
+tester-1  |
+tester-1  |         async def close_recv_stream_on_response_sent() -> None:
+tester-1  |             await response_sent.wait()
+tester-1  |             recv_stream.close()
+tester-1  |
+tester-1  |         async def send_no_error(message: Message) -> None:
+tester-1  |             try:
+tester-1  |                 await send_stream.send(message)
+tester-1  |             except anyio.BrokenResourceError:
+tester-1  |                 # recv_stream has been closed, i.e. response_sent has been set.
+tester-1  |                 return
+tester-1  |
+tester-1  |         async def coro() -> None:
+tester-1  |             nonlocal app_exc
+tester-1  |
+tester-1  |             async with send_stream:
+tester-1  |                 try:
+tester-1  |                     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  |                 except Exception as exc:
+tester-1  |                     app_exc = exc
+tester-1  |
+tester-1  |         task_group.start_soon(close_recv_stream_on_response_sent)
+tester-1  |         task_group.start_soon(coro)
+tester-1  |
+tester-1  |         try:
+tester-1  | >           message = await recv_stream.receive()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:78:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  |             return self.receive_nowait()
+tester-1  |         except WouldBlock:
+tester-1  |             # Add ourselves in the queue
+tester-1  |             receive_event = Event()
+tester-1  |             container: list[T_co] = []
+tester-1  |             self._state.waiting_receivers[receive_event] = container
+tester-1  |
+tester-1  |             try:
+tester-1  |                 await receive_event.wait()
+tester-1  |             except get_cancelled_exc_class():
+tester-1  |                 # Ignore the immediate cancellation if we already received an item, so as not to
+tester-1  |                 # lose it
+tester-1  |                 if not container:
+tester-1  |                     raise
+tester-1  |             finally:
+tester-1  |                 self._state.waiting_receivers.pop(receive_event, None)
+tester-1  |
+tester-1  |             if container:
+tester-1  |                 return container[0]
+tester-1  |             else:
+tester-1  | >               raise EndOfStream
+tester-1  | E               anyio.EndOfStream
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:118: EndOfStream
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | client = <starlette.testclient.TestClient object at 0x7ff9297d2d80>
+tester-1  |
+tester-1  |     def test_wpa_modeling_train_endpoint(client: TestClient):
+tester-1  |         job_id = str(uuid4())
+tester-1  |         request_data = {
+tester-1  |             "job_id": job_id,
+tester-1  |             "model_type": "random_forest",
+tester-1  |             "target_column": "species",
+tester-1  |             "feature_columns": ["sepal_length", "sepal_width"],
+tester-1  |             "session_id": "session-123"
+tester-1  |         }
+tester-1  |
+tester-1  |         with patch('backend.wpa.modeling.api.ModelingService') as mock_service:
+tester-1  |             mock_instance = mock_service.return_value
+tester-1  |             mock_instance.train_model.return_value = {
+tester-1  |                 "mlflow_run_id": "mock_run_id",
+tester-1  |                 "model_accuracy": 0.95
+tester-1  |             }
+tester-1  |
+tester-1  | >           response = client.post("/wpa/modeling/train", json=request_data)
+tester-1  |
+tester-1  | backend/tests/test_new_wpa_flows.py:24:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:590: in post
+tester-1  |     return super().post(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+tester-1  |     return self.request(
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:465: in request
+tester-1  |     return super().request(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:827: in request
+tester-1  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:914: in send
+tester-1  |     response = self._send_handling_auth(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+tester-1  |     response = self._send_handling_redirects(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+tester-1  |     response = self._send_single_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+tester-1  |     response = transport.handle_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:342: in handle_request
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:339: in handle_request
+tester-1  |     portal.call(self.app, scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:277: in call
+tester-1  |     return cast(T_Retval, self.start_task_soon(func, *args).result())
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:456: in result
+tester-1  |     return self.__get_result()
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+tester-1  |     raise self._exception
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+tester-1  |     retval = await retval
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/applications.py:1106: in __call__
+tester-1  |     await super().__call__(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/applications.py:122: in __call__
+tester-1  |     await self.middleware_stack(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:184: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:162: in __call__
+tester-1  |     await self.app(scope, receive, _send)
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:169: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:167: in __call__
+tester-1  |     await self.app(scope, receive, send_wrapper)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py:83: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:108: in __call__
+tester-1  |     response = await self.dispatch_func(request, call_next)
+tester-1  | backend/middleware/hardening_middleware.py:39: in dispatch
+tester-1  |     response = await call_next(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:84: in call_next
+tester-1  |     raise app_exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:70: in coro
+tester-1  |     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:79: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:68: in __call__
+tester-1  |     await self.app(scope, receive, sender)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:20: in __call__
+tester-1  |     raise e
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:17: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:718: in __call__
+tester-1  |     await route.handle(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:66: in app
+tester-1  |     response = await func(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:274: in app
+tester-1  |     raw_response = await run_endpoint_function(
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:191: in run_endpoint_function
+tester-1  |     return await dependant.call(**values)
+tester-1  | backend/wpa/modeling/api.py:23: in train_model
+tester-1  |     audit.log_event("wpa_modeling_train_started", request.job_id)
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = <backend.audit.service.AuditService object at 0x7ff92a986cc0>
+tester-1  | event_name = 'wpa_modeling_train_started'
+tester-1  | job_id = UUID('a4b5ea8d-6039-4d0d-971d-6c825920aa4f'), user_id = 'default_user'
+tester-1  | session_id = None, status = 'success', details = None
+tester-1  |
+tester-1  |     def log_event(
+tester-1  |         self,
+tester-1  |         event_name: str,
+tester-1  |         job_id: UUID,
+tester-1  |         user_id: Optional[str] = "default_user",
+tester-1  |         session_id: Optional[str] = None,
+tester-1  |         status: str = "success",
+tester-1  |         details: Optional[Dict[str, Any]] = None
+tester-1  |     ):
+tester-1  |         """
+tester-1  |         Logs a structured event to the audit log file.
+tester-1  |
+tester-1  |         Args:
+tester-1  |             event_name (str): The name of the event (e.g., "session_created", "model_trained").
+tester-1  |             job_id (UUID): The unique ID of the job this event belongs to.
+tester-1  |             user_id (str, optional): The ID of the user who initiated the event.
+tester-1  |             session_id (str, optional): The session ID if the event is part of a session.
+tester-1  |             status (str, optional): The status of the event (e.g., "success", "failed", "pending").
+tester-1  |             details (Dict[str, Any], optional): Any additional structured data about the event.
+tester-1  |         """
+tester-1  |         log_entry = {
+tester-1  | >           "audit_id": str(uuid.uuid4()),
+tester-1  |             "job_id": str(job_id),
+tester-1  |             "user_id": user_id,
+tester-1  |             "session_id": session_id,
+tester-1  |             "event_name": event_name,
+tester-1  |             "timestamp": datetime.utcnow().isoformat() + "Z",
+tester-1  |             "status": status,
+tester-1  |             "details": details or {}
+tester-1  |         }
+tester-1  | E       NameError: name 'uuid' is not defined. Did you forget to import 'uuid'
+tester-1  |
+tester-1  | backend/audit/service.py:34: NameError
+tester-1  | _____________________ test_wpa_report_generation_endpoint ______________________
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  | >           return self.receive_nowait()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:98:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     def receive_nowait(self) -> T_co:
+tester-1  |         """
+tester-1  |         Receive the next item if it can be done without waiting.
+tester-1  |
+tester-1  |         :return: the received item
+tester-1  |         :raises ~anyio.ClosedResourceError: if this send stream has been closed
+tester-1  |         :raises ~anyio.EndOfStream: if the buffer is empty and this stream has been
+tester-1  |             closed from the sending end
+tester-1  |         :raises ~anyio.WouldBlock: if there are no items in the buffer and no tasks
+tester-1  |             waiting to send
+tester-1  |
+tester-1  |         """
+tester-1  |         if self._closed:
+tester-1  |             raise ClosedResourceError
+tester-1  |
+tester-1  |         if self._state.waiting_senders:
+tester-1  |             # Get the item from the next sender
+tester-1  |             send_event, item = self._state.waiting_senders.popitem(last=False)
+tester-1  |             self._state.buffer.append(item)
+tester-1  |             send_event.set()
+tester-1  |
+tester-1  |         if self._state.buffer:
+tester-1  |             return self._state.buffer.popleft()
+tester-1  |         elif not self._state.open_send_channels:
+tester-1  |             raise EndOfStream
+tester-1  |
+tester-1  | >       raise WouldBlock
+tester-1  | E       anyio.WouldBlock
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:93: WouldBlock
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | request = <starlette.requests.Request object at 0x7ff929c94dd0>
+tester-1  |
+tester-1  |     async def call_next(request: Request) -> Response:
+tester-1  |         app_exc: typing.Optional[Exception] = None
+tester-1  |         send_stream, recv_stream = anyio.create_memory_object_stream()
+tester-1  |
+tester-1  |         async def receive_or_disconnect() -> Message:
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             async with anyio.create_task_group() as task_group:
+tester-1  |
+tester-1  |                 async def wrap(func: typing.Callable[[], typing.Awaitable[T]]) -> T:
+tester-1  |                     result = await func()
+tester-1  |                     task_group.cancel_scope.cancel()
+tester-1  |                     return result
+tester-1  |
+tester-1  |                 task_group.start_soon(wrap, response_sent.wait)
+tester-1  |                 message = await wrap(request.receive)
+tester-1  |
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             return message
+tester-1  |
+tester-1  |         async def close_recv_stream_on_response_sent() -> None:
+tester-1  |             await response_sent.wait()
+tester-1  |             recv_stream.close()
+tester-1  |
+tester-1  |         async def send_no_error(message: Message) -> None:
+tester-1  |             try:
+tester-1  |                 await send_stream.send(message)
+tester-1  |             except anyio.BrokenResourceError:
+tester-1  |                 # recv_stream has been closed, i.e. response_sent has been set.
+tester-1  |                 return
+tester-1  |
+tester-1  |         async def coro() -> None:
+tester-1  |             nonlocal app_exc
+tester-1  |
+tester-1  |             async with send_stream:
+tester-1  |                 try:
+tester-1  |                     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  |                 except Exception as exc:
+tester-1  |                     app_exc = exc
+tester-1  |
+tester-1  |         task_group.start_soon(close_recv_stream_on_response_sent)
+tester-1  |         task_group.start_soon(coro)
+tester-1  |
+tester-1  |         try:
+tester-1  | >           message = await recv_stream.receive()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:78:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  |             return self.receive_nowait()
+tester-1  |         except WouldBlock:
+tester-1  |             # Add ourselves in the queue
+tester-1  |             receive_event = Event()
+tester-1  |             container: list[T_co] = []
+tester-1  |             self._state.waiting_receivers[receive_event] = container
+tester-1  |
+tester-1  |             try:
+tester-1  |                 await receive_event.wait()
+tester-1  |             except get_cancelled_exc_class():
+tester-1  |                 # Ignore the immediate cancellation if we already received an item, so as not to
+tester-1  |                 # lose it
+tester-1  |                 if not container:
+tester-1  |                     raise
+tester-1  |             finally:
+tester-1  |                 self._state.waiting_receivers.pop(receive_event, None)
+tester-1  |
+tester-1  |             if container:
+tester-1  |                 return container[0]
+tester-1  |             else:
+tester-1  | >               raise EndOfStream
+tester-1  | E               anyio.EndOfStream
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:118: EndOfStream
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | client = <starlette.testclient.TestClient object at 0x7ff9297d2d80>
+tester-1  |
+tester-1  |     def test_wpa_report_generation_endpoint(client: TestClient):
+tester-1  |         job_id = str(uuid4())
+tester-1  |         request_data = {
+tester-1  |             "job_id": job_id,
+tester-1  |             "title": "Test Report",
+tester-1  |             "summary": "This is a test summary."
+tester-1  |         }
+tester-1  |
+tester-1  |         with patch('backend.wpa.report_generation.api.ReportGenerationService') as mock_service:
+tester-1  |             mock_instance = mock_service.return_value
+tester-1  |             mock_instance.generate_report.return_value = {"file_path": "test_report.docx"}
+tester-1  |
+tester-1  | >           response = client.post("/wpa/reports/generate", json=request_data)
+tester-1  |
+tester-1  | backend/tests/test_new_wpa_flows.py:46:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:590: in post
+tester-1  |     return super().post(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+tester-1  |     return self.request(
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:465: in request
+tester-1  |     return super().request(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:827: in request
+tester-1  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:914: in send
+tester-1  |     response = self._send_handling_auth(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+tester-1  |     response = self._send_handling_redirects(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+tester-1  |     response = self._send_single_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+tester-1  |     response = transport.handle_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:342: in handle_request
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:339: in handle_request
+tester-1  |     portal.call(self.app, scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:277: in call
+tester-1  |     return cast(T_Retval, self.start_task_soon(func, *args).result())
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:456: in result
+tester-1  |     return self.__get_result()
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+tester-1  |     raise self._exception
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+tester-1  |     retval = await retval
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/applications.py:1106: in __call__
+tester-1  |     await super().__call__(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/applications.py:122: in __call__
+tester-1  |     await self.middleware_stack(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:184: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:162: in __call__
+tester-1  |     await self.app(scope, receive, _send)
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:169: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:167: in __call__
+tester-1  |     await self.app(scope, receive, send_wrapper)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py:83: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:108: in __call__
+tester-1  |     response = await self.dispatch_func(request, call_next)
+tester-1  | backend/middleware/hardening_middleware.py:39: in dispatch
+tester-1  |     response = await call_next(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:84: in call_next
+tester-1  |     raise app_exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:70: in coro
+tester-1  |     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:79: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:68: in __call__
+tester-1  |     await self.app(scope, receive, sender)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:20: in __call__
+tester-1  |     raise e
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:17: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:718: in __call__
+tester-1  |     await route.handle(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:66: in app
+tester-1  |     response = await func(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:274: in app
+tester-1  |     raw_response = await run_endpoint_function(
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:191: in run_endpoint_function
+tester-1  |     return await dependant.call(**values)
+tester-1  | backend/wpa/report_generation/api.py:20: in generate_report_endpoint
+tester-1  |     audit.log_event("wpa_report_generation_started", request.job_id)
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = <backend.audit.service.AuditService object at 0x7ff92a986cc0>
+tester-1  | event_name = 'wpa_report_generation_started'
+tester-1  | job_id = UUID('4badc8b5-fa00-4491-8af5-739780c8980d'), user_id = 'default_user'
+tester-1  | session_id = None, status = 'success', details = None
+tester-1  |
+tester-1  |     def log_event(
+tester-1  |         self,
+tester-1  |         event_name: str,
+tester-1  |         job_id: UUID,
+tester-1  |         user_id: Optional[str] = "default_user",
+tester-1  |         session_id: Optional[str] = None,
+tester-1  |         status: str = "success",
+tester-1  |         details: Optional[Dict[str, Any]] = None
+tester-1  |     ):
+tester-1  |         """
+tester-1  |         Logs a structured event to the audit log file.
+tester-1  |
+tester-1  |         Args:
+tester-1  |             event_name (str): The name of the event (e.g., "session_created", "model_trained").
+tester-1  |             job_id (UUID): The unique ID of the job this event belongs to.
+tester-1  |             user_id (str, optional): The ID of the user who initiated the event.
+tester-1  |             session_id (str, optional): The session ID if the event is part of a session.
+tester-1  |             status (str, optional): The status of the event (e.g., "success", "failed", "pending").
+tester-1  |             details (Dict[str, Any], optional): Any additional structured data about the event.
+tester-1  |         """
+tester-1  |         log_entry = {
+tester-1  | >           "audit_id": str(uuid.uuid4()),
+tester-1  |             "job_id": str(job_id),
+tester-1  |             "user_id": user_id,
+tester-1  |             "session_id": session_id,
+tester-1  |             "event_name": event_name,
+tester-1  |             "timestamp": datetime.utcnow().isoformat() + "Z",
+tester-1  |             "status": status,
+tester-1  |             "details": details or {}
+tester-1  |         }
+tester-1  | E       NameError: name 'uuid' is not defined. Did you forget to import 'uuid'
+tester-1  |
+tester-1  | backend/audit/service.py:34: NameError
+tester-1  | ________________________ test_wpa_db_ingestion_endpoint ________________________
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  | >           return self.receive_nowait()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:98:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     def receive_nowait(self) -> T_co:
+tester-1  |         """
+tester-1  |         Receive the next item if it can be done without waiting.
+tester-1  |
+tester-1  |         :return: the received item
+tester-1  |         :raises ~anyio.ClosedResourceError: if this send stream has been closed
+tester-1  |         :raises ~anyio.EndOfStream: if the buffer is empty and this stream has been
+tester-1  |             closed from the sending end
+tester-1  |         :raises ~anyio.WouldBlock: if there are no items in the buffer and no tasks
+tester-1  |             waiting to send
+tester-1  |
+tester-1  |         """
+tester-1  |         if self._closed:
+tester-1  |             raise ClosedResourceError
+tester-1  |
+tester-1  |         if self._state.waiting_senders:
+tester-1  |             # Get the item from the next sender
+tester-1  |             send_event, item = self._state.waiting_senders.popitem(last=False)
+tester-1  |             self._state.buffer.append(item)
+tester-1  |             send_event.set()
+tester-1  |
+tester-1  |         if self._state.buffer:
+tester-1  |             return self._state.buffer.popleft()
+tester-1  |         elif not self._state.open_send_channels:
+tester-1  |             raise EndOfStream
+tester-1  |
+tester-1  | >       raise WouldBlock
+tester-1  | E       anyio.WouldBlock
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:93: WouldBlock
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | request = <starlette.requests.Request object at 0x7ff929992d80>
+tester-1  |
+tester-1  |     async def call_next(request: Request) -> Response:
+tester-1  |         app_exc: typing.Optional[Exception] = None
+tester-1  |         send_stream, recv_stream = anyio.create_memory_object_stream()
+tester-1  |
+tester-1  |         async def receive_or_disconnect() -> Message:
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             async with anyio.create_task_group() as task_group:
+tester-1  |
+tester-1  |                 async def wrap(func: typing.Callable[[], typing.Awaitable[T]]) -> T:
+tester-1  |                     result = await func()
+tester-1  |                     task_group.cancel_scope.cancel()
+tester-1  |                     return result
+tester-1  |
+tester-1  |                 task_group.start_soon(wrap, response_sent.wait)
+tester-1  |                 message = await wrap(request.receive)
+tester-1  |
+tester-1  |             if response_sent.is_set():
+tester-1  |                 return {"type": "http.disconnect"}
+tester-1  |
+tester-1  |             return message
+tester-1  |
+tester-1  |         async def close_recv_stream_on_response_sent() -> None:
+tester-1  |             await response_sent.wait()
+tester-1  |             recv_stream.close()
+tester-1  |
+tester-1  |         async def send_no_error(message: Message) -> None:
+tester-1  |             try:
+tester-1  |                 await send_stream.send(message)
+tester-1  |             except anyio.BrokenResourceError:
+tester-1  |                 # recv_stream has been closed, i.e. response_sent has been set.
+tester-1  |                 return
+tester-1  |
+tester-1  |         async def coro() -> None:
+tester-1  |             nonlocal app_exc
+tester-1  |
+tester-1  |             async with send_stream:
+tester-1  |                 try:
+tester-1  |                     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  |                 except Exception as exc:
+tester-1  |                     app_exc = exc
+tester-1  |
+tester-1  |         task_group.start_soon(close_recv_stream_on_response_sent)
+tester-1  |         task_group.start_soon(coro)
+tester-1  |
+tester-1  |         try:
+tester-1  | >           message = await recv_stream.receive()
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:78:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = MemoryObjectReceiveStream(_state=MemoryObjectStreamState(max_buffer_size=0, buffer=deque([]), open_send_channels=0, open_receive_channels=1, waiting_receivers=OrderedDict(), waiting_senders=OrderedDict()), _closed=False)
+tester-1  |
+tester-1  |     async def receive(self) -> T_co:
+tester-1  |         await checkpoint()
+tester-1  |         try:
+tester-1  |             return self.receive_nowait()
+tester-1  |         except WouldBlock:
+tester-1  |             # Add ourselves in the queue
+tester-1  |             receive_event = Event()
+tester-1  |             container: list[T_co] = []
+tester-1  |             self._state.waiting_receivers[receive_event] = container
+tester-1  |
+tester-1  |             try:
+tester-1  |                 await receive_event.wait()
+tester-1  |             except get_cancelled_exc_class():
+tester-1  |                 # Ignore the immediate cancellation if we already received an item, so as not to
+tester-1  |                 # lose it
+tester-1  |                 if not container:
+tester-1  |                     raise
+tester-1  |             finally:
+tester-1  |                 self._state.waiting_receivers.pop(receive_event, None)
+tester-1  |
+tester-1  |             if container:
+tester-1  |                 return container[0]
+tester-1  |             else:
+tester-1  | >               raise EndOfStream
+tester-1  | E               anyio.EndOfStream
+tester-1  |
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/streams/memory.py:118: EndOfStream
+tester-1  |
+tester-1  | During handling of the above exception, another exception occurred:
+tester-1  |
+tester-1  | client = <starlette.testclient.TestClient object at 0x7ff9297d2d80>
+tester-1  |
+tester-1  |     def test_wpa_db_ingestion_endpoint(client: TestClient):
+tester-1  |         job_id = str(uuid4())
+tester-1  |         request_data = {
+tester-1  |             "job_id": job_id,
+tester-1  |             "db_uri": "sqlite:///:memory:",
+tester-1  |             "sql_query": "SELECT 1"
+tester-1  |         }
+tester-1  |
+tester-1  |         with patch('backend.wpa.db_ingestion.api.DbIngestionService') as mock_service:
+tester-1  |             mock_instance = mock_service.return_value
+tester-1  |             mock_instance.ingest_from_db.return_value = {
+tester-1  |                 "session_id": "new-session-id",
+tester-1  |                 "data_preview": [{"col1": 1}]
+tester-1  |             }
+tester-1  |
+tester-1  | >           response = client.post("/wpa/ingestion/db", json=request_data)
+tester-1  |
+tester-1  | backend/tests/test_new_wpa_flows.py:69:
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:590: in post
+tester-1  |     return super().post(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1145: in post
+tester-1  |     return self.request(
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:465: in request
+tester-1  |     return super().request(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:827: in request
+tester-1  |     return self.send(request, auth=auth, follow_redirects=follow_redirects)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:914: in send
+tester-1  |     response = self._send_handling_auth(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+tester-1  |     response = self._send_handling_redirects(
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+tester-1  |     response = self._send_single_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/httpx/_client.py:1015: in _send_single_request
+tester-1  |     response = transport.handle_request(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:342: in handle_request
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/testclient.py:339: in handle_request
+tester-1  |     portal.call(self.app, scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:277: in call
+tester-1  |     return cast(T_Retval, self.start_task_soon(func, *args).result())
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:456: in result
+tester-1  |     return self.__get_result()
+tester-1  | /usr/local/lib/python3.12/concurrent/futures/_base.py:401: in __get_result
+tester-1  |     raise self._exception
+tester-1  | /usr/local/lib/python3.12/site-packages/anyio/from_thread.py:217: in _call_func
+tester-1  |     retval = await retval
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/applications.py:1106: in __call__
+tester-1  |     await super().__call__(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/applications.py:122: in __call__
+tester-1  |     await self.middleware_stack(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:184: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/errors.py:162: in __call__
+tester-1  |     await self.app(scope, receive, _send)
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:169: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/prometheus_fastapi_instrumentator/middleware.py:167: in __call__
+tester-1  |     await self.app(scope, receive, send_wrapper)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/cors.py:83: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:108: in __call__
+tester-1  |     response = await self.dispatch_func(request, call_next)
+tester-1  | backend/middleware/hardening_middleware.py:39: in dispatch
+tester-1  |     response = await call_next(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:84: in call_next
+tester-1  |     raise app_exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/base.py:70: in coro
+tester-1  |     await self.app(scope, receive_or_disconnect, send_no_error)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:79: in __call__
+tester-1  |     raise exc
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/middleware/exceptions.py:68: in __call__
+tester-1  |     await self.app(scope, receive, sender)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:20: in __call__
+tester-1  |     raise e
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:17: in __call__
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:718: in __call__
+tester-1  |     await route.handle(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+tester-1  |     await self.app(scope, receive, send)
+tester-1  | /usr/local/lib/python3.12/site-packages/starlette/routing.py:66: in app
+tester-1  |     response = await func(request)
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:274: in app
+tester-1  |     raw_response = await run_endpoint_function(
+tester-1  | /usr/local/lib/python3.12/site-packages/fastapi/routing.py:191: in run_endpoint_function
+tester-1  |     return await dependant.call(**values)
+tester-1  | backend/wpa/db_ingestion/api.py:21: in ingest_from_db_endpoint
+tester-1  |     audit.log_event("wpa_db_ingestion_started", request.job_id)
+tester-1  | _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tester-1  |
+tester-1  | self = <backend.audit.service.AuditService object at 0x7ff92a986cc0>
+tester-1  | event_name = 'wpa_db_ingestion_started'
+tester-1  | job_id = UUID('171bf088-bb06-45cf-af26-7c06d0eb6162'), user_id = 'default_user'
+tester-1  | session_id = None, status = 'success', details = None
+tester-1  |
+tester-1  |     def log_event(
+tester-1  |         self,
+tester-1  |         event_name: str,
+tester-1  |         job_id: UUID,
+tester-1  |         user_id: Optional[str] = "default_user",
+tester-1  |         session_id: Optional[str] = None,
+tester-1  |         status: str = "success",
+tester-1  |         details: Optional[Dict[str, Any]] = None
+tester-1  |     ):
+tester-1  |         """
+tester-1  |         Logs a structured event to the audit log file.
+tester-1  |
+tester-1  |         Args:
+tester-1  |             event_name (str): The name of the event (e.g., "session_created", "model_trained").
+tester-1  |             job_id (UUID): The unique ID of the job this event belongs to.
+tester-1  |             user_id (str, optional): The ID of the user who initiated the event.
+tester-1  |             session_id (str, optional): The session ID if the event is part of a session.
+tester-1  |             status (str, optional): The status of the event (e.g., "success", "failed", "pending").
+tester-1  |             details (Dict[str, Any], optional): Any additional structured data about the event.
+tester-1  |         """
+tester-1  |         log_entry = {
+tester-1  | >           "audit_id": str(uuid.uuid4()),
+tester-1  |             "job_id": str(job_id),
+tester-1  |             "user_id": user_id,
+tester-1  |             "session_id": session_id,
+tester-1  |             "event_name": event_name,
+tester-1  |             "timestamp": datetime.utcnow().isoformat() + "Z",
+tester-1  |             "status": status,
+tester-1  |             "details": details or {}
+tester-1  |         }
+tester-1  | E       NameError: name 'uuid' is not defined. Did you forget to import 'uuid'
+tester-1  |
+tester-1  | backend/audit/service.py:34: NameError
+tester-1  | _______________________ test_wpa_auto_analysis_endpoint ________________________
+tester-1  |
+tester-1  | mock_wpa_service = <MagicMock name='WpaAutoAnalysisService' id='140708121444960'>
+tester-1  | client = <starlette.testclient.TestClient object at 0x7ff92998aa80>
+tester-1  |
+tester-1  |     @patch('backend.wpa.auto_analysis.api.WpaAutoAnalysisService')
+tester-1  |     def test_wpa_auto_analysis_endpoint(mock_wpa_service, client):
+tester-1  |         """
+tester-1  |         Tests the /wpa/auto-analysis endpoint.
+tester-1  |         Mocks the entire WPA service to test the API layer and orchestration call.
+tester-1  |         """
+tester-1  |         # Configure the mock to return a valid EDA report
+tester-1  |         mock_instance = mock_wpa_service.return_value
+tester-1  |         mock_instance.execute.return_value = SAMPLE_EDA_REPORT
+tester-1  |
+tester-1  |         # Define the request payload
+tester-1  |         request_data = {
+tester-1  |             "source_type": "file",
+tester-1  |             "data": [{"col1": 1, "col2": "a"}],
+tester-1  |             "etl_steps": [{"action": "rename", "parameters": {"columns": {"col1": "new_col"}}}]
+tester-1  |         }
+tester-1  |
+tester-1  |         # Make the request
+tester-1  |         response = client.post("/wpa/auto-analysis", json=request_data)
+tester-1  |
+tester-1  |         # Assertions
+tester-1  | >       assert response.status_code == 200
+tester-1  | E       assert 422 == 200
+tester-1  | E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+tester-1  |
+tester-1  | backend/tests/test_wpa.py:32: AssertionError
+tester-1  | ----------------------------- Captured stderr call -----------------------------
+tester-1  | 2025-11-20 23:56:15,702 - INFO - HTTP Request: POST http://testserver/wpa/auto-analysis "HTTP/1.1 422 Unprocessable Entity"
+tester-1  | ------------------------------ Captured log call -------------------------------
+tester-1  | INFO     httpx:_client.py:1026 HTTP Request: POST http://testserver/wpa/auto-analysis "HTTP/1.1 422 Unprocessable Entity"
+tester-1  | =============================== warnings summary ===============================
+tester-1  | <frozen importlib._bootstrap>:488
+tester-1  |   <frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.MessageMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+tester-1  |
+tester-1  | <frozen importlib._bootstrap>:488
+tester-1  |   <frozen importlib._bootstrap>:488: DeprecationWarning: Type google._upb._message.ScalarMapContainer uses PyType_Spec with a metaclass that has custom tp_new. This is deprecated and will no longer be allowed in Python 3.14.
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/utils/requirements_utils.py:20
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/utils/requirements_utils.py:20: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+tester-1  |     import pkg_resources  # noqa: TID251
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/pkg_resources/__init__.py:3146
+tester-1  |   /usr/local/lib/python3.12/site-packages/pkg_resources/__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('google')`.
+tester-1  |   Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+tester-1  |     declare_namespace(pkg)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:61
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:61: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("togetherai_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:75
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:75: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("cohere_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:83
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("ai21labs_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:92
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:92: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("mosaicml_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:122
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:122: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("openai_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:179
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:179: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("anthropic_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:187
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:187: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("palm_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:227
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:227: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("mistral_api_key", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:308
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:308: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("provider", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:329
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:329: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("config", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:369
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:369: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("name")
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:379
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:379: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("model", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:390
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:390: PydanticDeprecatedSince20: Pydantic V1 style `@root_validator` validators are deprecated. You should migrate to Pydantic V2 style `@model_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @root_validator(skip_on_failure=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:412
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:412: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("route_type", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:418
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:418: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     @validator("limit", pre=True)
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:468
+tester-1  |   /usr/local/lib/python3.12/site-packages/mlflow/gateway/config.py:468: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     class Route(ConfigModel):
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/shap/plots/colors/_colorconv.py:819: 909 warnings
+tester-1  |   /usr/local/lib/python3.12/site-packages/shap/plots/colors/_colorconv.py:819: DeprecationWarning: Converting `np.inexact` or `np.floating` to a dtype is deprecated. The current result is `float64` which is not strictly correct.
+tester-1  |     if np.issubdtype(dtype_in, np.dtype(dtype).type):
+tester-1  |
+tester-1  | backend/mcp/schemas.py:39
+tester-1  |   /app/backend/mcp/schemas.py:39: PydanticDeprecatedSince20: The `update_forward_refs` method is deprecated; use `model_rebuild` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     Session.update_forward_refs()
+tester-1  |
+tester-1  | backend/mcp/schemas.py:40
+tester-1  |   /app/backend/mcp/schemas.py:40: PydanticDeprecatedSince20: The `update_forward_refs` method is deprecated; use `model_rebuild` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+tester-1  |     Job.update_forward_refs()
+tester-1  |
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | ../usr/local/lib/python3.12/site-packages/httpx/_client.py:680
+tester-1  | backend/tests/test_new_wpa_flows.py::test_wpa_modeling_train_endpoint
+tester-1  | backend/tests/test_wpa.py::test_wpa_auto_analysis_endpoint
+tester-1  |   /usr/local/lib/python3.12/site-packages/httpx/_client.py:680: DeprecationWarning: The 'app' shortcut is now deprecated. Use the explicit style 'transport=WSGITransport(app=...)' instead.
+tester-1  |     warnings.warn(message, DeprecationWarning)
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py: 31 warnings
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:72: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
+tester-1  |     pd.to_datetime(series, errors='raise'); return "datetime"
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_conflict_resolution_with_hierarchy_and_frequency
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_quality_report_bug_fix
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:203: DeprecationWarning: DataFrameGroupBy.apply operated on the grouping columns. This behavior is deprecated, and in a future version of pandas the grouping columns will be excluded from the operation. Either pass `include_groups=False` to exclude the groupings or explicitly select the grouping columns after groupby to silence this warning.
+tester-1  |     merged_df = concatenated_df.groupby(id_column, group_keys=False).apply(self._resolve_conflicts_for_group)
+tester-1  |
+tester-1  | backend/tests/test_intelligent_merge_wpa.py::test_quality_report_bug_fix
+tester-1  |   /app/backend/wpa/intelligent_merge/service.py:318: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+tester-1  |     "report_generated_at": datetime.utcnow().isoformat(),
+tester-1  |
+tester-1  | backend/tests/test_prompt_tracer_service.py::test_log_prompt_creates_file_and_writes_log
+tester-1  |   /app/backend/services/prompt_tracer.py:90: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+tester-1  |     "timestamp_utc": datetime.utcnow().isoformat(),
+tester-1  |
+tester-1  | -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+tester-1  | =========================== short test summary info ============================
+tester-1  | FAILED backend/tests/test_new_wpa_flows.py::test_wpa_modeling_train_endpoint
+tester-1  | FAILED backend/tests/test_new_wpa_flows.py::test_wpa_report_generation_endpoint
+tester-1  | FAILED backend/tests/test_new_wpa_flows.py::test_wpa_db_ingestion_endpoint - ...
+tester-1  | FAILED backend/tests/test_wpa.py::test_wpa_auto_analysis_endpoint - assert 42...
+tester-1  | ================== 4 failed, 40 passed, 971 warnings in 3.87s ==================
