@@ -17,7 +17,9 @@ class QualityReportRequest(BaseModel):
 
 @router.post("/report", response_model=Dict[str, Any])
 def get_quality_report(
-    request: QualityReportRequest,
+ 
+    data: List[Dict[str, Any]] = Body(..., description="A list of data records to be analyzed."),
+ 
     service: DataQualityService = Depends(get_data_quality_service)
 ):
     """
