@@ -1,5 +1,4 @@
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List, Dict, Any
 import pandas as pd
 from pydantic import BaseModel
@@ -17,19 +16,17 @@ class QualityReportRequest(BaseModel):
 
 @router.post("/report", response_model=Dict[str, Any])
 def get_quality_report(
- 
     data: List[Dict[str, Any]] = Body(..., description="A list of data records to be analyzed."),
- 
     service: DataQualityService = Depends(get_data_quality_service)
 ):
     """
     Generates a comprehensive data quality report for the provided dataset.
     """
-    if not request.data:
+    if not data:
         raise HTTPException(status_code=400, detail="No data provided.")
 
     try:
-        df = pd.DataFrame(request.data)
+        df = pd.DataFrame(data)
         report = service.get_quality_report(df)
         return report
     except Exception as e:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import FileResponse
 import os
 import zipfile
@@ -20,8 +20,8 @@ def get_agent_executor(request: Request):
     return request.app.state.agent_executor
 
 @router.get("/get-steps")
-async def get_steps():
-    return {"steps": get_logged_steps()}
+async def get_steps(session_id: str = Query(...)):
+    return {"steps": get_logged_steps(session_id=session_id)}
 
 @router.get("/visualizations")
 async def visualizations():
@@ -63,7 +63,11 @@ async def chat_agent(
         )
 
         # 4. Invocar al agente con el input enriquecido
-        result = await agent_executor.ainvoke({"input": enriched_input, "data": request.data})
+        result = await agent_executor.ainvoke({
+            "input": enriched_input,
+            "data": request.data,
+            "config": {"configurable": {"session_id": session_id}}
+        })
   
         # Manejo robusto:
         if isinstance(result, dict) and "output" in result:
@@ -81,11 +85,11 @@ async def chat_agent(
         raise HTTPException(status_code=500, detail=f"Error en el agente de chat: {e}")
 
 @router.get("/export/code")
-async def export_code():
+async def export_code(session_id: str = Query(...)):
     """
     Exports the logged code steps into a structured ZIP file.
     """
-    steps = get_logged_steps()
+    steps = get_logged_steps(session_id=session_id)
     if not steps:
         raise HTTPException(status_code=404, detail="No hay pasos de código para exportar.")
 

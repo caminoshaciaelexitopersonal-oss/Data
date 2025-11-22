@@ -53,9 +53,10 @@ interface Message {
 
 interface ChatViewProps {
     onSendMessage: (message: string) => Promise<any>;
+    session_id: string;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage, session_id }) => {
     const [messages, setMessages] = useState<Message[]>([
         { sender: 'bot', text: "¡Hola! Soy tu asistente de análisis de datos. ¿Qué te gustaría hacer hoy? Puedes decirme 'carga un archivo' o 'ejecuta un clustering con 3 grupos'." }
     ]);
@@ -82,7 +83,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onSendMessage }) => {
         setIsLoading(true);
 
         try {
-            const agentResponse = await onSendMessage(messageText);
+            const agentResponse = await onSendMessage(messageText, session_id);
             let botResponse: Message;
 
             if (typeof agentResponse.output === 'object' && agentResponse.output.image_base64) {

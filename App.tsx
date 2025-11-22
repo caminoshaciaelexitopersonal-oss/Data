@@ -1,15 +1,14 @@
-import React, { useReducer, useState } from 'react';
+import React, { useReducer, useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { initialState, reducer } from './reducer';
 import { ToastMessage } from './components/Toast';
 import { ChatView } from './components/ChatView';
 import { DataSourceModal } from './components/DataSourceModal';
 import { CodeViewerModal } from './components/CodeViewerModal';
-import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard'; // Importar PVA
+import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
-import { CodeIcon, ChartIcon } from './components/icons'; // Importar ChartIcon
- 
+import { CodeIcon, ChartIcon } from './components/icons';
 import { QualityReportPayloadSchema, ChatAgentPayloadSchema } from './frontend/src/validation/apiSchemas';
- 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -38,7 +37,6 @@ const SheetSelectionModal: React.FC<{
     </div>
 );
 
-
 import { ToastContainer } from './components/Toast';
 
 const App: React.FC = () => {
@@ -49,6 +47,11 @@ const App: React.FC = () => {
     const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
+    const [sessionId, setSessionId] = useState('');
+
+    useEffect(() => {
+        setSessionId(uuidv4());
+    }, []);
 
     const [sheetModalState, setSheetModalState] = useState<{ isOpen: boolean; file: File | null; sheetNames: string[] }>({
         isOpen: false,
@@ -70,66 +73,52 @@ const App: React.FC = () => {
     };
 
     const pollTaskStatus = (taskId: string) => {
- 
         const interval = setInterval(async () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/mcp/tasks/${taskId}/status`);
                 if (!response.ok) {
-                    // Stop polling on server error, but don't clear the toast
-                    // as it might contain the initial "in progress" message.
                     clearInterval(interval);
                     return;
-                } 
+                }
                 const result = await response.json();
 
                 if (result.status === 'SUCCESS') {
                     clearInterval(interval);
                     addToast('El procesamiento de archivos ha finalizado con éxito.', 'success');
-                    // Aquí podrías despachar una acción para actualizar los datos si es necesario
                 } else if (result.status === 'FAILURE') {
                     clearInterval(interval);
                     addToast(`El procesamiento de archivos ha fallado: ${result.result}`, 'error');
                 }
-                // Si el estado es PENDING o RUNNING, no hacemos nada y seguimos sondeando.
-
             } catch (error) {
                 clearInterval(interval);
                 addToast('No se pudo verificar el estado de la tarea.', 'error');
             }
-        }, 5000); // Sondear cada 5 segundos
- 
+        }, 5000);
     };
 
     const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
         try {
- 
-            QualityReportPayloadSchema.parse(data); // Validar payload
+            QualityReportPayloadSchema.parse(data);
             const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
- 
             });
             if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
 
             const healthReport = await response.json();
-
-            // Aquí asumimos que el reducer puede manejar esta nueva acción
             dispatch({ type: 'SET_DATA_HEALTH_REPORT', payload: { healthReport } });
             addToast(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
-
         } catch (error) {
             addToast(`Error al generar el informe de salud: ${(error as Error).message}`, 'error');
         }
     };
 
     const handleExcelFileLoad = async (file: File) => {
- 
         await handleFileLoad(file);
     };
 
     const handleMongoDbConnect = async (uri: string, db: string, collection: string) => {
- 
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a MongoDB...' } });
         try {
             const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-mongodb`, {
@@ -171,12 +160,9 @@ const App: React.FC = () => {
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
-  main
     };
 
     const handleSheetSelection = async (sheetName: string, file: File | null) => {
-        // La nueva lógica de backend maneja la selección de hojas automáticamente.
-        // Simplemente pasamos el archivo al manejador de carga principal.
         if (!file) return;
         setSheetModalState({ isOpen: false, file: null, sheetNames: [] });
         await handleFileLoad(file);
@@ -185,9 +171,8 @@ const App: React.FC = () => {
     const handleFileLoad = async (file: File) => {
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando archivo...' } });
         const formData = new FormData();
-        formData.append('file', file); // Ensure the key is 'file'
+        formData.append('file', file);
         try {
-            // Corrected endpoint
             const response = await fetch(`${API_BASE_URL}/mpa/ingestion/upload-file/`, {
                 method: 'POST',
                 body: formData
@@ -195,7 +180,6 @@ const App: React.FC = () => {
             if (!response.ok) throw new Error((await response.json()).detail);
             
             const { filename, data } = await response.json();
-
             dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
             addToast(`Archivo '${filename}' cargado.`, 'success');
             fetchAndSetDataHealthReport(data, filename);
@@ -232,7 +216,7 @@ const App: React.FC = () => {
         }
     };
 
-    const handleUserMessage = async (message: string): Promise<any> => {
+    const handleUserMessage = async (message: string, sessionId: string): Promise<any> => {
         const lowerCaseMessage = message.toLowerCase();
         if (lowerCaseMessage.includes("carga") || lowerCaseMessage.includes("sube")) {
             setIsDataSourceModalOpen(true);
@@ -249,9 +233,10 @@ const App: React.FC = () => {
             const payload = {
                 message: message,
                 data: state.processedData,
-                llm_preference: llmPreference
+                llm_preference: llmPreference,
+                session_id: sessionId
             };
-            ChatAgentPayloadSchema.parse(payload); // Validar payload
+            ChatAgentPayloadSchema.parse(payload);
             const response = await fetch(`${API_BASE_URL}/api/v1/chat/agent/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -261,7 +246,6 @@ const App: React.FC = () => {
             const agentResponse = await response.json();
 
             if (agentResponse.output) {
-                // Forzar actualización del panel después de una ejecución
                 setCurrentView('dashboard');
             }
 
@@ -273,7 +257,6 @@ const App: React.FC = () => {
     };
 
     const handleMultiFileLoad = async (files: FileList) => {
- 
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Subiendo archivos...' } });
         const formData = new FormData();
         Array.from(files).forEach(file => {
@@ -289,21 +272,19 @@ const App: React.FC = () => {
 
             const { task_id, message } = await response.json();
             addToast(message, 'info');
-            pollTaskStatus(task_id); // Iniciar el sondeo
-
+            pollTaskStatus(task_id);
         } catch (error) {
             addToast(`Error al subir los archivos: ${(error as Error).message}`, 'error');
         } finally {
             dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
         }
- 
     };
 
     return (
         <div className="bg-gray-900 text-slate-200 h-screen font-sans flex flex-col">
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
             {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onMongoDbConnect={(uri, db, collection) => { handleMongoDbConnect(uri, db, collection); setIsDataSourceModalOpen(false); }} onS3Connect={(bucket, key) => { handleS3Connect(bucket, key); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
-            {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} /> )}
+            {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} session_id={sessionId} /> )}
             {isPromptTraceModalOpen && ( <PromptTraceModal onClose={() => setIsPromptTraceModalOpen(false)} /> )}
 
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
@@ -346,7 +327,7 @@ const App: React.FC = () => {
 
             <main className="flex-1 overflow-y-auto">
                 {currentView === 'chat' ? (
-                    <ChatView onSendMessage={handleUserMessage} />
+                    <ChatView onSendMessage={handleUserMessage} session_id={sessionId} />
                 ) : (
                     <VisualAnalyticsBoard />
                 )}

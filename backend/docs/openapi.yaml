@@ -1,32 +1,49 @@
 openapi: 3.0.0
 info:
-  title: SADI MPA API
-  version: 1.0.0
+  title: "SADI - Sistema de Analítica de Datos Inteligente API"
+  description: |
+    Contrato oficial de la API para el sistema SADI.
+    Esta especificación es la única fuente de verdad para la interoperabilidad
+    entre el backend y el frontend. Define todos los endpoints estables y
+    experimentales, así como sus schemas de datos.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8000
+    description: Servidor de desarrollo local
+
+tags:
+  - name: "Core (Legacy)"
+    description: "Endpoints estables y funcionales de la arquitectura heredada."
+  - name: "Experimental - MCP"
+    description: "Endpoints experimentales del Main Control Plane."
+  - name: "Experimental - MPA"
+    description: "Endpoints experimentales de los Módulos de Proceso (Ingesta, EDA, etc.)."
+  - name: "Experimental - WPA"
+    description: "Endpoints experimentales de los Flujos de Trabajo Automatizados."
+
 paths:
-  /mpa/quality/report:
-    post:
-      tags:
-        - "MPA - Data Quality"
-      summary: Generates a comprehensive data quality report
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    type: object
-                    additionalProperties: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        '422':
-          description: Validation Error
+  # Los paths se documentarán aquí en las fases siguientes.
+  # Ejemplo:
+  # /api/v1/chat/agent/:
+  #   post:
+  #     tags:
+  #       - "Core (Legacy)"
+  #     summary: "Interactúa con el agente de IA."
+  #     ...
+
+components:
+  schemas:
+    # Los schemas de datos reutilizables se definirán aquí.
+    # Ejemplo:
+    # ChatRequest:
+    #   type: object
+    #   properties:
+    #     message:
+    #       type: string
+    #     data:
+    #       type: array
+    #       items:
+    #         type: object
+  securitySchemes:
+    # Se pueden definir esquemas de seguridad (ej. JWT, API Key) aquí en el futuro.
