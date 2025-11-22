@@ -8,19 +8,25 @@ interface Step {
 
 interface CodeViewerModalProps {
     onClose: () => void;
+    session_id: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose }) => {
+export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose, session_id }) => {
     const [steps, setSteps] = useState<Step[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchSteps = async () => {
+            if (!session_id) {
+                setError("No se ha proporcionado un ID de sesión.");
+                setLoading(false);
+                return;
+            }
             try {
-                const response = await fetch(`${API_BASE_URL}/api/v1/get-steps`);
+                const response = await fetch(`${API_BASE_URL}/api/v1/get-steps?session_id=${session_id}`);
                 if (!response.ok) {
                     throw new Error('No se pudo obtener los pasos del servidor.');
                 }
@@ -34,7 +40,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose }) => 
         };
 
         fetchSteps();
-    }, []);
+    }, [session_id]);
 
     const handleCopy = (code: string) => {
         navigator.clipboard.writeText(code);
@@ -49,7 +55,7 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({ onClose }) => 
                         <h2 className="text-xl font-bold text-white">Pasos Técnicos y Código Fuente</h2>
                         {steps.length > 0 && (
                             <a
-                                href={`${API_BASE_URL}/export/code`}
+                                href={`${API_BASE_URL}/api/v1/export/code?session_id=${session_id}`}
                                 download="sadi_codigo_exportado.zip"
                                 className="text-sm text-cyan-400 hover:underline mt-1 inline-block"
                             >

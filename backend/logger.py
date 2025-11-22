@@ -3,6 +3,7 @@ import logging
 import json
 from typing import List, Dict, Any
 from datetime import datetime
+from backend.app.services.state_store import get_state_store
 
 # --- Structured Logger Setup ---
 
@@ -17,14 +18,10 @@ class JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
             "name": record.name,
         }
-        # Add extra fields if they exist
         if hasattr(record, 'extra_data'):
             log_record.update(record.extra_data)
-
-        # Add exception info if it exists
         if record.exc_info:
             log_record['exc_info'] = self.formatException(record.exc_info)
-
         return json.dumps(log_record)
 
 def setup_logger() -> logging.Logger:
@@ -33,25 +30,20 @@ def setup_logger() -> logging.Logger:
     """
     logger = logging.getLogger("sadi_logger")
     logger.setLevel(logging.INFO)
-
-    # Prevents adding handlers multiple times
     if not logger.handlers:
         handler = logging.StreamHandler()
         formatter = JsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-
     return logger
 
-# Initialize the logger
 logger = setup_logger()
 
-
-# --- In-memory step tracking for SADI Code Viewer ---
-# This list remains to support the frontend's "View Code" feature.
-executed_steps: List[Dict[str, Any]] = []
+# --- Persistent Step Tracking using StateStore ---
+# The in-memory list `executed_steps` has been removed.
 
 def log_step(
+    session_id: str,
     description: str,
     code: str,
     llm_prompt: str = None,
@@ -59,38 +51,30 @@ def log_step(
     execution_time_ms: float = None
 ):
     """
-    Records an execution step for the SADI Code Viewer and also logs the event
-    to the structured logger.
+    Records an execution step to the persistent StateStore and also logs
+    the event to the structured logger.
     """
-    timestamp = datetime.utcnow().isoformat()
-
-    # Log the event using the structured logger
     logger.info("Executing agent step", extra={'extra_data': {
         "event_type": "agent_step",
         "step_description": description,
         "execution_time_ms": execution_time_ms,
     }})
 
-    # Keep the original functionality for the frontend Code Viewer
-    log_entry = {
-        "description": description,
-        "codigo": code,
-        "timestamp": timestamp,
-        "llm_prompt": llm_prompt,
-        "llm_response": llm_response,
-        "execution_time_ms": execution_time_ms
-    }
-    executed_steps.append(log_entry)
+    # Persist the step in the StateStore instead of the in-memory list.
+    state_store = get_state_store()
+    state_store.log_step(
+        session_id=session_id,
+        description=description,
+        code=code
+    )
 
-def get_logged_steps() -> List[Dict[str, Any]]:
+def get_logged_steps(session_id: str) -> List[Dict[str, Any]]:
     """
-    Returns all the steps that have been recorded for the SADI Code Viewer.
+    Returns all the steps for a given session from the persistent StateStore.
     """
-    return executed_steps
+    # Retrieve steps from the StateStore instead of the in-memory list.
+    state_store = get_state_store()
+    return state_store.get_steps(session_id=session_id)
 
-def clear_log():
-    """
-    Clears the in-memory log of steps for the SADI Code Viewer.
-    """
-    logger.info("Clearing execution step log for new agent run.", extra={'extra_data': {"event_type": "log_clear"}})
-    executed_steps.clear()
+# The `clear_log` function has been removed. Its functionality is incompatible
+# with a persistent, multi-session state model.
