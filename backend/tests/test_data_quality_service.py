@@ -76,7 +76,7 @@ def test_generate_suggestions(sample_dataframe):
 
 def test_quality_report_endpoint(sample_json_data):
     """Tests the full /mpa/quality/report endpoint."""
-    response = client.post("/mpa/quality/report", json=sample_json_data)
+    response = client.post("/mpa/quality/report", json={"data": sample_json_data})
 
     assert response.status_code == 200
 
@@ -88,6 +88,6 @@ def test_quality_report_endpoint(sample_json_data):
     assert len(data["suggestions"]) == 3
 
 def test_quality_report_endpoint_no_data():
-    response = client.post("/mpa/quality/report", json=[])
+    response = client.post("/mpa/quality/report", json={"data": []})
     assert response.status_code == 400
     assert response.json() == {"detail": "No data provided."}
