@@ -71,6 +71,11 @@ def create_app():
     # Register the single experimental router with the main app.
     app.include_router(experimental_router)
 
+    # --- Unified Interoperability Router ---
+    # This is the NEW primary entry point for all stable, interoperable functionality.
+    from backend.app.api import unified_router
+    app.include_router(unified_router.router)
+
     # --- Legacy & Stable Routers ---
     app.include_router(core.router, prefix="/api/v1", tags=["Core (Legacy)"])
     app.include_router(ingestion_orchestrator.router, prefix="/api/v1", tags=["Ingestion Orchestrator"])
