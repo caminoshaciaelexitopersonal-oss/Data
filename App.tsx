@@ -8,7 +8,7 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons';
-import { ChatAgentPayloadSchema } from '@/frontend/src/validation/apiSchemas';
+import { ChatAgentPayloadSchema } from '@/validation/apiSchemas';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/unified/v1";
 
@@ -81,30 +81,6 @@ const App: React.FC = () => {
 
     const dismissToast = (id: number) => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-    };
-
-    const pollTaskStatus = (taskId: string) => {
-        const interval = setInterval(async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/mcp/tasks/${taskId}/status`);
-                if (!response.ok) {
-                    clearInterval(interval);
-                    return;
-                }
-                const result = await response.json();
-
-                if (result.status === 'SUCCESS') {
-                    clearInterval(interval);
-                    addToast('El procesamiento de archivos ha finalizado con éxito.', 'success');
-                } else if (result.status === 'FAILURE') {
-                    clearInterval(interval);
-                    addToast(`El procesamiento de archivos ha fallado: ${result.result}`, 'error');
-                }
-            } catch (error) {
-                clearInterval(interval);
-                addToast('No se pudo verificar el estado de la tarea.', 'error');
-            }
-        }, 5000);
     };
 
     const fetchAndSetDataHealthReport = async (sessionId: string, fileName: string) => {
@@ -194,7 +170,11 @@ const App: React.FC = () => {
         }
     };
 
-    const handleUserMessage = async (message: string, sessionId: string): Promise<any> => {
+    const handleUserMessage = async (message: string, sessionId: string | null): Promise<any> => {
+        if (!sessionId) {
+            addToast('La sesión no está activa. Por favor, recargue la página.', 'error');
+            return;
+        }
         const lowerCaseMessage = message.toLowerCase();
         if (lowerCaseMessage.includes("carga") || lowerCaseMessage.includes("sube")) {
             setIsDataSourceModalOpen(true);
@@ -234,34 +214,10 @@ const App: React.FC = () => {
         }
     };
 
-    const handleMultiFileLoad = async (files: FileList) => {
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Subiendo archivos...' } });
-        const formData = new FormData();
-        Array.from(files).forEach(file => {
-            formData.append('files', file);
-        });
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/mpa/ingestion/multi-upload/`, {
-                method: 'POST',
-                body: formData,
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { task_id, message } = await response.json();
-            addToast(message, 'info');
-            pollTaskStatus(task_id);
-        } catch (error) {
-            addToast(`Error al subir los archivos: ${(error as Error).message}`, 'error');
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
-    };
-
     return (
         <div className="bg-gray-900 text-slate-200 h-screen font-sans flex flex-col">
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
-            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
+            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
             {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} session_id={sessionId ?? ""} /> )}
             {isPromptTraceModalOpen && ( <PromptTraceModal onClose={() => setIsPromptTraceModalOpen(false)} /> )}
 
