@@ -13,6 +13,7 @@ from backend.agent.pre_analysis import detect_intent
 from backend.schemas import ChatRequest
 from fastapi import Request
 from backend.services.prompt_tracer import PromptTracerService, get_prompt_tracer_service
+from backend.app.services.state_store import StateStore, get_state_store
 
 router = APIRouter()
 
@@ -39,7 +40,8 @@ async def download_report():
 async def chat_agent(
     request: ChatRequest,
     agent_executor = Depends(get_agent_executor),
-    tracer_service: PromptTracerService = Depends(get_prompt_tracer_service)
+    tracer_service: PromptTracerService = Depends(get_prompt_tracer_service),
+    state_store: StateStore = Depends(get_state_store)
 ):
     if agent_executor is None:
         raise HTTPException(
@@ -49,11 +51,13 @@ async def chat_agent(
 
     session_id = request.session_id or str(uuid.uuid4())
     try:
-        # 1. Crear un DataFrame de muestra para el pre-análisis
-        df_sample = pd.DataFrame(request.data)
+        # 1. Load the DataFrame from the state store using the session_id
+        df_sample = state_store.load_dataframe(session_id)
+        if df_sample is None:
+            raise HTTPException(status_code=404, detail=f"No data found for session_id: {session_id}")
 
         # 2. Ejecutar el pre-análisis inteligente
-        analysis = detect_intent(request.message, df_sample)
+        analysis = detect_intent(request.message, df_sample.head()) # Use a sample for speed
 
         # 3. Enriquecer el input del agente con el contexto del pre-análisis
         enriched_input = (
@@ -65,7 +69,6 @@ async def chat_agent(
         # 4. Invocar al agente con el input enriquecido
         result = await agent_executor.ainvoke({
             "input": enriched_input,
-            "data": request.data,
             "config": {"configurable": {"session_id": session_id}}
         })
   

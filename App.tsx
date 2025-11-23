@@ -8,9 +8,10 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons';
-import { ChatAgentPayloadSchema } from '@/validation/apiSchemas';
+// Import the generated API client
+import { OpenAPI, DefaultService, QualityReport } from './services/api-client';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/unified/v1";
+OpenAPI.BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000");
 
 const SheetSelectionModal: React.FC<{
     sheetNames: string[];
@@ -52,11 +53,10 @@ const App: React.FC = () => {
     useEffect(() => {
         const createSession = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/session/create`, { method: 'POST' });
-                if (!response.ok) throw new Error('Failed to create session');
-                const data = await response.json();
-                setSessionId(data.session_id);
-                addToast(`Sesión iniciada: ${data.session_id}`, 'info');
+                // Use the generated client to create a session
+                const session = await DefaultService.createSession();
+                setSessionId(session.session_id);
+                addToast(`Sesión iniciada: ${session.session_id}`, 'info');
             } catch (error) {
                 addToast(`Error al iniciar sesión: ${(error as Error).message}`, 'error');
             }
@@ -83,19 +83,17 @@ const App: React.FC = () => {
         setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
     };
 
-    const fetchAndSetDataHealthReport = async (sessionId: string, fileName: string) => {
+    const generateAndSetDataHealthReport = async (sessionId: string, fileName: string) => {
         if (!sessionId) return;
         try {
-            const response = await fetch(`${API_BASE_URL}/quality/report`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId }),
-            });
-            if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
-
-            const healthReport = await response.json();
-            dispatch({ type: 'SET_DATA_HEALTH_REPORT', payload: { healthReport } });
-            addToast(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
+            // Use the generated client to get the quality report, sending the correct payload
+            const healthReport = await DefaultService.getQualityReport({ session_id: sessionId });
+            if (healthReport) {
+                 dispatch({ type: 'SET_DATA_HEALTH_REPORT', payload: { healthReport: healthReport as QualityReport } });
+                 addToast(`Informe de salud generado para '${fileName}'. Puntuación: ${healthReport.health_score}`, 'info');
+            } else {
+                throw new Error("El informe de salud no pudo ser generado.");
+            }
         } catch (error) {
             addToast(`Error al generar el informe de salud: ${(error as Error).message}`, 'error');
         }
@@ -117,27 +115,17 @@ const App: React.FC = () => {
             return;
         }
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando archivo...' } });
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('session_id', sessionId);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/ingestion/upload-file`, {
-                method: 'POST',
-                body: formData
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-            
-            const { filename } = await response.json();
-            // NOTE: We no longer receive data. We just get a confirmation.
-            // We clear the old data and set the new filename.
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data: [], originalData: [], fileName: filename, qualityReport: {}, outlierReport: {} } });
-            addToast(`Archivo '${filename}' cargado y asociado a la sesión.`, 'success');
+            // Use the generated client. This fixes the incorrect URL path.
+            const response = await DefaultService.uploadFile({ session_id: sessionId, file: file });
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data: [], originalData: [], fileName: response.filename, qualityReport: {}, outlierReport: {} } });
+            addToast(`Archivo '${response.filename}' cargado y asociado a la sesión.`, 'success');
 
             // Now, get the health report using the session_id
-            await fetchAndSetDataHealthReport(sessionId, filename);
+            await generateAndSetDataHealthReport(sessionId, response.filename);
 
-            return `Archivo ${filename} cargado.`;
+            return `Archivo ${response.filename} cargado.`;
         } catch (error) {
             addToast(`Error al cargar el archivo: ${(error as Error).message}`, 'error');
             throw error;
@@ -146,28 +134,11 @@ const App: React.FC = () => {
         }
     };
 
+    // NOTE: DB Connect functionality is temporarily disabled as it's not defined in the final OpenAPI contract.
     const handleDbConnect = async (uri: string, query: string) => {
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a la base de datos...' } });
-        try {
-            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-db`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ db_uri: uri, query }),
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { data } = await response.json();
-            const fileName = `Consulta: ${query.substring(0, 30)}...`;
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addToast(`Datos cargados desde la base de datos.`, 'success');
-            fetchAndSetDataHealthReport(data, fileName);
-            return `Datos cargados desde la base de datos con ${data.length} filas.`;
-        } catch (error) {
-            addToast(`Error de conexión con la base de datos: ${(error as Error).message}`, 'error');
-            throw error;
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
+        const message = "La conexión a bases de datos está en desarrollo.";
+        addToast(message, 'info');
+        return message;
     };
 
     const handleUserMessage = async (message: string, sessionId: string | null): Promise<any> => {
@@ -184,24 +155,16 @@ const App: React.FC = () => {
             setCurrentView('dashboard');
             return { output: "Claro, abriendo el Panel de Visualización Analítica." };
         }
-        if (!state.processedData || state.processedData.length === 0) {
+        // Check if a file has been loaded by looking at the fileName in state.
+        if (!state.fileName) {
             throw new Error("No hay datos cargados. Por favor, carga un archivo o conéctate a una base de datos primero.");
         }
         try {
-            const payload = {
-                message: message,
-                data: state.processedData,
-                llm_preference: llmPreference,
-                session_id: sessionId
-            };
-            ChatAgentPayloadSchema.parse(payload);
-            const response = await fetch(`${API_BASE_URL}/chat/agent`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+            // Use the generated client, which sends the correct session-based payload.
+            const agentResponse = await DefaultService.chatAgent({
+                session_id: sessionId,
+                message: message
             });
-            if (!response.ok) throw new Error((await response.json()).detail);
-            const agentResponse = await response.json();
 
             if (agentResponse.output) {
                 setCurrentView('dashboard');

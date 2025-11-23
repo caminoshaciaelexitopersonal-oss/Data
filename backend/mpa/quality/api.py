@@ -1,32 +1,33 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import List, Dict, Any
-import pandas as pd
+from typing import Dict, Any
 from pydantic import BaseModel
 
 from backend.services.data_quality_service import DataQualityService, get_data_quality_service
+from backend.app.services.state_store import StateStore, get_state_store
 
 router = APIRouter(prefix="/mpa/quality", tags=["MPA - Data Quality"])
 
-class QualityReportRequest(BaseModel):
-    data: List[Dict[str, Any]]
-
-    model_config = {
-        "extra": "forbid"
-    }
+class SessionRequest(BaseModel):
+    """Defines the standard request model for session-based operations."""
+    session_id: str
 
 @router.post("/report", response_model=Dict[str, Any])
 def get_quality_report(
-    data: List[Dict[str, Any]] = Body(..., description="A list of data records to be analyzed."),
-    service: DataQualityService = Depends(get_data_quality_service)
+    request: SessionRequest = Body(...),
+    service: DataQualityService = Depends(get_data_quality_service),
+    state_store: StateStore = Depends(get_state_store)
 ):
     """
-    Generates a comprehensive data quality report for the provided dataset.
+    Generates a comprehensive data quality report for the dataset associated
+    with the given session_id.
     """
-    if not data:
-        raise HTTPException(status_code=400, detail="No data provided.")
-
     try:
-        df = pd.DataFrame(data)
+        # Load the DataFrame from the state store using the session_id
+        df = state_store.load_dataframe(session_id=request.session_id)
+        if df is None:
+            raise HTTPException(status_code=404, detail=f"No data found for session_id: {request.session_id}")
+
+        # Generate the report using the loaded data
         report = service.get_quality_report(df)
         return report
     except Exception as e:
