@@ -30,3 +30,6 @@ class DbConnectionRequest(BaseModel):
 class S3ConnectionRequest(BaseModel):
     bucket_name: str
     object_key: str
+
+class SessionRequest(BaseModel):
+    session_id: str
