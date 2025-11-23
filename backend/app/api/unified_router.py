@@ -3,116 +3,46 @@
 """
 The Unified API Router for SADI.
 
-This router serves as the single, stable entry point for all frontend operations.
-It completely decouples the client from the complex and conflicting backend architectures.
-
-Each endpoint defined here will delegate its logic to the InteropController,
-which will then use the appropriate bridge to fulfill the request.
+This router serves as the single, stable entry point for all frontend operations
+and consolidates all functional backend modules (MCP, MPA, WPA).
 """
 
-from fastapi import APIRouter, Depends, UploadFile, File, Body, Request, HTTPException, Form
-from backend.interoperability.controller import InteropController, get_interop_controller
-import pandas as pd
+from fastapi import APIRouter
+from backend.mcp import api as mcp_api
+from backend.mpa.ingestion import api as ingestion_mpa_api
+from backend.mpa.eda import api as eda_mpa_api
+from backend.mpa.quality import api as quality_mpa_api
+from backend.mpa.ml import api as ml_mpa_api
+from backend.wpa.auto_analysis import api as wpa_auto_analysis_api
+from backend.wpa.modeling import api as wpa_modeling_api
+from backend.wpa.report_generation import api as wpa_report_generation_api
+from backend.wpa.db_ingestion import api as wpa_db_ingestion_api
+from backend.wpa.intelligent_merge import api as wpa_intelligent_merge_api
+from backend.routers.prompts_api import router as prompts_router
+from backend.routers.eda_recalculate_api import router as eda_recalculate_router
+from backend.routers.export_api import router as export_router
+from backend.routers.validation_api import router as validation_router
+from backend.routers.pipelines_api import router as pipelines_router
+from backend.app.api.core import router as core_router # For chat agent
+from backend.app.api.ingestion_orchestrator import router as ingestion_orchestrator_router
 
 router = APIRouter(prefix="/unified/v1", tags=["Unified Stable Endpoints"])
 
-# NOTE: The implementation of these endpoints is intentionally minimal.
-# They are simple pass-throughs to the interoperability controller,
-# which holds the responsibility of orchestrating the complex logic.
-
-from backend.interoperability.data_bridge import DataBridge, get_data_bridge
-
-@router.post("/ingestion/upload-file")
-async def unified_ingestion(
-    session_id: str = Form(...),
-    file: UploadFile = File(...),
-    data_bridge: DataBridge = Depends(get_data_bridge)
-):
-    """
-    Unified endpoint for file ingestion. Always persistent.
-    """
-    # DELEGATION: This endpoint now directly calls the data bridge.
-    return await data_bridge.bridge_ingestion(file, session_id)
-
-from backend.interoperability.session_bridge import SessionBridge, get_session_bridge
-
-@router.post("/session/create")
-async def unified_create_session(
-    session_bridge: SessionBridge = Depends(get_session_bridge)
-):
-    """
-    Unified endpoint for creating a session. Always persistent.
-    """
-    # DELEGATION: This endpoint now directly calls the session bridge.
-    return session_bridge.bridge_create_session()
-
-from backend.schemas import ChatRequest
-from backend.app.services.state_store import StateStore
-from backend.interoperability.unified_agent import UnifiedAgent
-from backend.audit.persistent_logger import PersistentLogger
-
-@router.post("/chat/agent")
-async def unified_chat_agent(payload: ChatRequest):
-    """
-    Unified endpoint for the chat agent.
-    """
-    session_id = payload.session_id
-    message = payload.message
-
-    # 1. Cargar sesión
-    # NOTE: Direct instantiation as per restoration plan.
-    session = StateStore().get_session(session_id)
-
-    # 2. Enviar al agente unificado
-    agent = UnifiedAgent(session=session)
-    response = agent.run(message)
-
-    # 3. Registrar paso
-    PersistentLogger().log_step(session_id, "agent_response", response)
-
-    return {"response": response}
-
-from backend.schemas import SessionRequest
-
-from backend.interoperability.mpa_controller import MpaController
-
-# --- Functional Endpoints ---
-# These endpoints are now connected to the UnifiedAgent, providing a consistent
-# entry point for all analysis tasks.
-
-@router.post("/quality/report")
-async def unified_quality_report(payload: SessionRequest):
-    """
-    Generates a data quality report for the session by directly calling the MPA controller.
-    """
-    session = StateStore().get_session(payload.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    mpa_controller = MpaController(session)
-    report = mpa_controller.execute_quality_report()
-    return report
-
-@router.post("/eda/report")
-async def unified_eda_report(payload: SessionRequest):
-    """
-    Generates an Exploratory Data Analysis (EDA) report for the session.
-    (Placeholder pending MPA service implementation)
-    """
-    return {"message": "EDA report endpoint is active", "status": "pending_implementation"}
-
-@router.post("/ml/train")
-async def unified_ml_train(payload: SessionRequest):
-    """
-    Trains a machine learning model based on the session data.
-    (Placeholder pending MPA service implementation)
-    """
-    return {"message": "ML training endpoint is active", "status": "pending_implementation"}
-
-@router.get("/visualizations")
-async def unified_visualizations(session_id: str):
-    """
-    Retrieves all generated visualizations for the session.
-    (Placeholder pending MPA service implementation)
-    """
-    return {"message": "Visualizations endpoint is active", "status": "pending_implementation"}
+# Include all functional routers from the new architecture
+router.include_router(mcp_api.router)
+router.include_router(ingestion_mpa_api.router)
+router.include_router(eda_mpa_api.router)
+router.include_router(quality_mpa_api.router)
+router.include_router(ml_mpa_api.router)
+router.include_router(wpa_auto_analysis_api.router)
+router.include_router(wpa_modeling_api.router)
+router.include_router(wpa_report_generation_api.router)
+router.include_router(wpa_db_ingestion_api.router)
+router.include_router(wpa_intelligent_merge_api.router)
+router.include_router(prompts_router)
+router.include_router(eda_recalculate_router)
+router.include_router(export_router)
+router.include_router(validation_router)
+router.include_router(pipelines_router)
+router.include_router(core_router)
+router.include_router(ingestion_orchestrator_router)
