@@ -3,6 +3,7 @@ import pandas as pd
 import io
 from sqlalchemy import create_engine, text
 from backend.schemas import DbConnectionRequest
+from backend.app.services.state_store import StateStore
 
 class IngestionService:
     """
@@ -19,28 +20,27 @@ class IngestionService:
         "application/parquet",
     ]
 
-    async def process_file(self, file: UploadFile) -> pd.DataFrame:
+    def __init__(self, state_store: StateStore = StateStore()):
+        self.state_store = state_store
+
+    async def process_file(self, file: UploadFile, session_id: str) -> pd.DataFrame:
         """
-        Processes an uploaded file and returns a pandas DataFrame.
-        Includes security checks for file size, MIME type, and magic bytes.
+        Processes an uploaded file, converts it to a pandas DataFrame,
+        and persists it to the session's state.
         """
         if file.size > self.MAX_FILE_SIZE:
             raise HTTPException(status_code=413, detail="File is too large.")
 
-        # Read the initial part of the file to check its real type
         contents = await file.read()
 
         try:
             import magic
             actual_mime_type = magic.from_buffer(contents, mime=True)
         except ImportError:
-            # Fallback if libmagic is not available in the environment
             actual_mime_type = file.content_type
         except Exception:
-            # Handle cases where magic library fails on a file
             raise HTTPException(status_code=415, detail="Could not determine file type.")
 
-        # Security Check: Compare declared MIME type with actual MIME type
         if actual_mime_type != file.content_type:
             raise HTTPException(status_code=415, detail=f"File type mismatch: declared as {file.content_type}, but appears to be {actual_mime_type}.")
 
@@ -50,17 +50,21 @@ class IngestionService:
         try:
             if actual_mime_type == "text/csv":
                 df = pd.read_csv(io.StringIO(contents.decode("utf-8")))
-            elif file.content_type in [
+            elif actual_mime_type in [
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             ]:
                 df = pd.read_excel(io.BytesIO(contents))
-            elif file.content_type == "application/json":
+            elif actual_mime_type == "application/json":
                 df = pd.read_json(io.StringIO(contents.decode("utf-8")))
-            elif file.content_type == "application/parquet":
+            elif actual_mime_type == "application/parquet":
                 df = pd.read_parquet(io.BytesIO(contents))
             else:
                 raise HTTPException(status_code=415, detail="Unsupported file type.")
+
+            # --- CRITICAL: PERSIST DATA TO SESSION STATE ---
+            self.state_store.save_dataframe(session_id, df)
+
             return df
         except Exception as e:
             raise HTTPException(status_code=422, detail=f"Error processing file: {e}")

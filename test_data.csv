@@ -1,4 +1,4 @@
-id,nombre,valor
-1,productoA,100
-2,productoB,200
-3,productoC,300
+col1,col2
+1,A
+2,B
+3,C
