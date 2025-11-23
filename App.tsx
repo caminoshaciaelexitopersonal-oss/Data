@@ -8,9 +8,9 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons';
-import { QualityReportPayloadSchema, ChatAgentPayloadSchema } from './frontend/src/validation/apiSchemas';
+import { QualityReportPayloadSchema, ChatAgentPayloadSchema } from '@/frontend/src/validation/apiSchemas';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/compat/v1";
 
 const SheetSelectionModal: React.FC<{
     sheetNames: string[];
