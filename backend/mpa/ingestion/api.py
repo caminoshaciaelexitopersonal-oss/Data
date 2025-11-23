@@ -26,32 +26,3 @@ async def upload_file(
         "message": "File processed successfully by the Ingestion MPA."
     }
 
-@router.post("/multi-upload/")
-async def multi_upload(
-    files: list[UploadFile] = File(...),
-    ingestion_service: IngestionService = Depends(get_ingestion_service)
-):
-    """
-    Handles multiple file uploads, processes them, and returns a task ID.
-    NOTE: This is a simplified, synchronous version for interoperability.
-    A full implementation would use a background task.
-    """
-    # In a real scenario, you would start a Celery task here:
-    # task = process_files_task.delay([file.filename for file in files])
-    # For now, we simulate a task ID and process synchronously.
-    task_id = f"task_{uuid.uuid4()}"
-
-    processed_files = []
-    for file in files:
-        df = await ingestion_service.process_file(file)
-        processed_files.append({
-            "filename": file.filename,
-            "records": len(df)
-        })
-
-    return {
-        "task_id": task_id,
-        "status": "SUCCESS", # Simulating immediate success
-        "message": f"{len(processed_files)} files processed.",
-        "processed_files": processed_files
-    }

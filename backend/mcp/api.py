@@ -45,14 +45,3 @@ def create_step(
         raise HTTPException(status_code=404, detail="Job not found to create step in")
     return step
 
-@router.get("/tasks/{task_id}/status")
-def get_task_status(task_id: str):
-    """
-    Simulates fetching the status of a background task.
-    In a real implementation, this would query Celery.
-    """
-    # Simulate different states for demonstration
-    if "fail" in task_id:
-        return {"task_id": task_id, "status": "FAILURE", "result": "Simulated processing error."}
-
-    return {"task_id": task_id, "status": "SUCCESS", "result": "Task completed successfully."}
