@@ -2,6 +2,7 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+import pandas as pd
 
 # --- Configuration ---
 DB_STORAGE_PATH = Path("backend/data")
@@ -204,6 +205,20 @@ class StateStore:
         for row in cursor.fetchall():
             viz_data[row['name']] = json.loads(row['data'])
         return viz_data
+
+    def save_dataframe(self, session_id: str, df: pd.DataFrame):
+        """Saves a DataFrame to a Parquet file in the session's directory."""
+        session_dir = DB_STORAGE_PATH / session_id
+        session_dir.mkdir(exist_ok=True)
+        df.to_parquet(session_dir / "data.parquet")
+
+    def load_dataframe(self, session_id: str) -> Optional[pd.DataFrame]:
+        """Loads a DataFrame from a Parquet file in the session's directory."""
+        session_dir = DB_STORAGE_PATH / session_id
+        parquet_file = session_dir / "data.parquet"
+        if parquet_file.exists():
+            return pd.read_parquet(parquet_file)
+        return None
 
 # --- Dependency Injector ---
 
