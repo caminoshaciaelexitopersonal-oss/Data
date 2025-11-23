@@ -10,8 +10,9 @@ Each endpoint defined here will delegate its logic to the InteropController,
 which will then use the appropriate bridge to fulfill the request.
 """
 
-from fastapi import APIRouter, Depends, UploadFile, File, Body, Request
+from fastapi import APIRouter, Depends, UploadFile, File, Body, Request, HTTPException, Form
 from backend.interoperability.controller import InteropController, get_interop_controller
+import pandas as pd
 
 router = APIRouter(prefix="/unified/v1", tags=["Unified Stable Endpoints"])
 
@@ -23,6 +24,7 @@ from backend.interoperability.data_bridge import DataBridge, get_data_bridge
 
 @router.post("/ingestion/upload-file")
 async def unified_ingestion(
+    session_id: str = Form(...),
     file: UploadFile = File(...),
     data_bridge: DataBridge = Depends(get_data_bridge)
 ):
@@ -30,7 +32,7 @@ async def unified_ingestion(
     Unified endpoint for file ingestion. Always persistent.
     """
     # DELEGATION: This endpoint now directly calls the data bridge.
-    return await data_bridge.bridge_ingestion(file)
+    return await data_bridge.bridge_ingestion(file, session_id)
 
 from backend.interoperability.session_bridge import SessionBridge, get_session_bridge
 
@@ -56,5 +58,26 @@ async def unified_chat_agent(
     # payload = await request.json()
     # return await controller.bridge_chat(payload)
     return {"message": "Unified chat agent endpoint is active", "status": "pending_implementation"}
+
+from backend.services.data_quality_service import DataQualityService, get_data_quality_service
+from pathlib import Path
+
+TEMP_STORAGE_PATH = Path("backend/data/.tmp/ingestion")
+
+@router.post("/quality/report")
+async def unified_quality_report(
+    session_id: str = Body(..., embed=True),
+    service: DataQualityService = Depends(get_data_quality_service)
+):
+    """
+    Unified endpoint for generating a data quality report from a session_id.
+    """
+    file_path = TEMP_STORAGE_PATH / session_id / "ingestion_result.csv"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="No data found for the given session ID.")
+
+    df = pd.read_csv(file_path)
+    report = service.get_quality_report(df)
+    return report
 
 # Additional unified endpoints for EDA, quality, ML, etc., will be added here.

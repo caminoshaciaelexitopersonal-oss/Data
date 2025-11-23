@@ -18,16 +18,16 @@ class DataBridge:
         # The service is instantiated on demand, consistent with legacy approach.
         self._ingestion_service = IngestionOrchestratorService()
 
-    async def bridge_ingestion(self, file):
+    async def bridge_ingestion(self, file, session_id: str):
         """
         Bridges the MPA file upload to the legacy persistent storage pattern.
 
-        1. Receives a file from a unified endpoint.
-        2. Calls the legacy IngestionOrchestrator to process and save the file.
-        3. Returns a consistent response, including a session_id, which the MPA
-           endpoint did not originally provide.
+        1. Receives a file and session_id from a unified endpoint.
+        2. Calls the IngestionOrchestrator to process and save the file
+           under the given session_id.
+        3. Returns a consistent response.
         """
-        session_id = await self._ingestion_service.process_single_file(file)
+        await self._ingestion_service.process_single_file(file, session_id)
 
         # Log the audit event
         from .controller import get_interop_controller

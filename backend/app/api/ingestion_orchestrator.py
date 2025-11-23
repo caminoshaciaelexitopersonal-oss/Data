@@ -29,12 +29,11 @@ class IngestionOrchestratorService:
     to processing and persisting them to a temporary storage.
     """
 
-    def _save_to_temp_storage(self, df: pd.DataFrame) -> str:
+    def _save_to_temp_storage(self, df: pd.DataFrame, session_id: str) -> str:
         """
-        Saves a DataFrame to a CSV file in the temporary storage area.
-        Returns the unique ID of the saved file.
+        Saves a DataFrame to a CSV file in the temporary storage area
+        under a given session_id. Returns the session_id.
         """
-        session_id = str(uuid.uuid4())
         output_folder = TEMP_STORAGE_PATH / session_id
         output_folder.mkdir(exist_ok=True)
 
@@ -43,7 +42,7 @@ class IngestionOrchestratorService:
 
         return session_id
 
-    async def process_single_file(self, file: UploadFile) -> str:
+    async def process_single_file(self, file: UploadFile, session_id: str) -> str:
         """
         Processes a single uploaded file (e.g., CSV, Excel) and persists it.
         Returns a session_id pointing to the processed data.
@@ -63,7 +62,7 @@ class IngestionOrchestratorService:
             else:
                 raise HTTPException(status_code=415, detail="File type not supported in this version.")
 
-            session_id = self._save_to_temp_storage(df)
+            self._save_to_temp_storage(df, session_id)
             return session_id
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
@@ -96,15 +95,15 @@ class IngestionOrchestratorService:
 # --- API Endpoints ---
 
 @router.post("/upload/unified")
-async def unified_upload(file: UploadFile = File(...)):
+async def unified_upload(session_id: str = Body(...), file: UploadFile = File(...)):
     """
     The new, unified endpoint for file ingestion.
     This endpoint accepts a file, processes it, persists it to a temporary
-    location on the server, and returns a session_id for future reference.
+    location on the server under the provided session_id, and returns a confirmation.
     It DOES NOT return the data in the response.
     """
     service = IngestionOrchestratorService()
-    session_id = await service.process_single_file(file)
+    await service.process_single_file(file, session_id)
 
     return {
         "message": "File processed and persisted successfully.",

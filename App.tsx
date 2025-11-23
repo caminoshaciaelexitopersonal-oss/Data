@@ -8,9 +8,9 @@ import { CodeViewerModal } from './components/CodeViewerModal';
 import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
 import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
 import { CodeIcon, ChartIcon } from './components/icons';
-import { QualityReportPayloadSchema, ChatAgentPayloadSchema } from '@/frontend/src/validation/apiSchemas';
+import { ChatAgentPayloadSchema } from '@/frontend/src/validation/apiSchemas';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/compat/v1";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000") + "/unified/v1";
 
 const SheetSelectionModal: React.FC<{
     sheetNames: string[];
@@ -47,10 +47,21 @@ const App: React.FC = () => {
     const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
-    const [sessionId, setSessionId] = useState('');
+    const [sessionId, setSessionId] = useState<string | null>(null);
 
     useEffect(() => {
-        setSessionId(uuidv4());
+        const createSession = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/session/create`, { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to create session');
+                const data = await response.json();
+                setSessionId(data.session_id);
+                addToast(`Sesión iniciada: ${data.session_id}`, 'info');
+            } catch (error) {
+                addToast(`Error al iniciar sesión: ${(error as Error).message}`, 'error');
+            }
+        };
+        createSession();
     }, []);
 
     const [sheetModalState, setSheetModalState] = useState<{ isOpen: boolean; file: File | null; sheetNames: string[] }>({
@@ -96,13 +107,13 @@ const App: React.FC = () => {
         }, 5000);
     };
 
-    const fetchAndSetDataHealthReport = async (data: any[], fileName: string) => {
+    const fetchAndSetDataHealthReport = async (sessionId: string, fileName: string) => {
+        if (!sessionId) return;
         try {
-            QualityReportPayloadSchema.parse(data);
-            const response = await fetch(`${API_BASE_URL}/mpa/quality/report`, {
+            const response = await fetch(`${API_BASE_URL}/quality/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
+                body: JSON.stringify({ session_id: sessionId }),
             });
             if (!response.ok) throw new Error('No se pudo generar el informe de salud de los datos.');
 
@@ -118,50 +129,6 @@ const App: React.FC = () => {
         await handleFileLoad(file);
     };
 
-    const handleMongoDbConnect = async (uri: string, db: string, collection: string) => {
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Conectando a MongoDB...' } });
-        try {
-            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-mongodb`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mongo_uri: uri, db_name: db, collection_name: collection }),
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { data } = await response.json();
-            const fileName = `MongoDB: ${db}/${collection}`;
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addToast(`Datos cargados desde MongoDB correctamente.`, 'success');
-            fetchAndSetDataHealthReport(data, fileName);
-        } catch (error) {
-            addToast(`Error de conexión con MongoDB: ${(error as Error).message}`, 'error');
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
-    };
-
-    const handleS3Connect = async (bucket: string, key: string) => {
-        dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando datos desde S3...' } });
-        try {
-            const response = await fetch(`${API_BASE_URL}/wpa/ingestion/from-s3`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bucket_name: bucket, object_key: key }),
-            });
-            if (!response.ok) throw new Error((await response.json()).detail);
-
-            const { data } = await response.json();
-            const fileName = `S3: ${bucket}/${key}`;
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName, qualityReport: {}, outlierReport: {} } });
-            addToast(`Datos cargados desde S3 correctamente.`, 'success');
-            fetchAndSetDataHealthReport(data, fileName);
-        } catch (error) {
-            addToast(`Error de conexión con S3: ${(error as Error).message}`, 'error');
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
-        }
-    };
-
     const handleSheetSelection = async (sheetName: string, file: File | null) => {
         if (!file) return;
         setSheetModalState({ isOpen: false, file: null, sheetNames: [] });
@@ -169,21 +136,32 @@ const App: React.FC = () => {
     };
 
     const handleFileLoad = async (file: File) => {
+        if (!sessionId) {
+            addToast('La sesión no está activa. Por favor, recargue la página.', 'error');
+            return;
+        }
         dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Cargando archivo...' } });
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('session_id', sessionId);
+
         try {
-            const response = await fetch(`${API_BASE_URL}/mpa/ingestion/upload-file/`, {
+            const response = await fetch(`${API_BASE_URL}/ingestion/upload-file`, {
                 method: 'POST',
                 body: formData
             });
             if (!response.ok) throw new Error((await response.json()).detail);
             
-            const { filename, data } = await response.json();
-            dispatch({ type: 'SET_DATA_LOADED', payload: { data, originalData: data, fileName: filename, qualityReport: {}, outlierReport: {} } });
-            addToast(`Archivo '${filename}' cargado.`, 'success');
-            fetchAndSetDataHealthReport(data, filename);
-            return `Archivo ${filename} cargado con ${data.length} filas.`;
+            const { filename } = await response.json();
+            // NOTE: We no longer receive data. We just get a confirmation.
+            // We clear the old data and set the new filename.
+            dispatch({ type: 'SET_DATA_LOADED', payload: { data: [], originalData: [], fileName: filename, qualityReport: {}, outlierReport: {} } });
+            addToast(`Archivo '${filename}' cargado y asociado a la sesión.`, 'success');
+
+            // Now, get the health report using the session_id
+            await fetchAndSetDataHealthReport(sessionId, filename);
+
+            return `Archivo ${filename} cargado.`;
         } catch (error) {
             addToast(`Error al cargar el archivo: ${(error as Error).message}`, 'error');
             throw error;
@@ -283,8 +261,8 @@ const App: React.FC = () => {
     return (
         <div className="bg-gray-900 text-slate-200 h-screen font-sans flex flex-col">
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
-            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onMongoDbConnect={(uri, db, collection) => { handleMongoDbConnect(uri, db, collection); setIsDataSourceModalOpen(false); }} onS3Connect={(bucket, key) => { handleS3Connect(bucket, key); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
-            {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} session_id={sessionId} /> )}
+            {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onMultiFileLoad={(files) => { handleMultiFileLoad(files); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
+            {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} session_id={sessionId ?? ""} /> )}
             {isPromptTraceModalOpen && ( <PromptTraceModal onClose={() => setIsPromptTraceModalOpen(false)} /> )}
 
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
