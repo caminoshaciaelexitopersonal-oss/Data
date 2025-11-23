@@ -1,49 +1,176 @@
 openapi: 3.0.0
 info:
-  title: "SADI - Sistema de Analítica de Datos Inteligente API"
-  description: |
-    Contrato oficial de la API para el sistema SADI.
-    Esta especificación es la única fuente de verdad para la interoperabilidad
-    entre el backend y el frontend. Define todos los endpoints estables y
-    experimentales, así como sus schemas de datos.
+  title: "SADI - Unified API"
   version: "1.0.0"
-
-servers:
-  - url: http://localhost:8000
-    description: Servidor de desarrollo local
-
-tags:
-  - name: "Core (Legacy)"
-    description: "Endpoints estables y funcionales de la arquitectura heredada."
-  - name: "Experimental - MCP"
-    description: "Endpoints experimentales del Main Control Plane."
-  - name: "Experimental - MPA"
-    description: "Endpoints experimentales de los Módulos de Proceso (Ingesta, EDA, etc.)."
-  - name: "Experimental - WPA"
-    description: "Endpoints experimentales de los Flujos de Trabajo Automatizados."
+  description: "The single source of truth for the SADI API, enforcing a session-state architecture."
 
 paths:
-  # Los paths se documentarán aquí en las fases siguientes.
-  # Ejemplo:
-  # /api/v1/chat/agent/:
-  #   post:
-  #     tags:
-  #       - "Core (Legacy)"
-  #     summary: "Interactúa con el agente de IA."
-  #     ...
+  /unified/v1/mcp/session/create:
+    post:
+      summary: "Create Session"
+      operationId: "create_session"
+      responses:
+        '200':
+          description: "Session created successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /unified/v1/mpa/ingestion/upload-file/:
+    post:
+      summary: "Upload File"
+      operationId: "upload_file"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: "File uploaded and processed successfully."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  session_id:
+                    type: string
+                    format: uuid
+                  filename:
+                    type: string
+
+  /unified/v1/mpa/quality/report:
+    post:
+      summary: "Get Data Quality Report"
+      operationId: "get_quality_report"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+      responses:
+        '200':
+          description: "Data quality report generated successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityReport'
+
+  /unified/v1/chat/agent/:
+    post:
+      summary: "Chat with Agent"
+      operationId: "chat_agent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatAgentRequest'
+      responses:
+        '200':
+          description: "Agent response."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output:
+                    type: string
+
+  /unified/v1/wpa/modeling/train:
+    post:
+      summary: "Train Model (WPA)"
+      operationId: "train_model_wpa"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelTrainRequest'
+      responses:
+        '200':
+          description: "Model training started."
 
 components:
   schemas:
-    # Los schemas de datos reutilizables se definirán aquí.
-    # Ejemplo:
-    # ChatRequest:
-    #   type: object
-    #   properties:
-    #     message:
-    #       type: string
-    #     data:
-    #       type: array
-    #       items:
-    #         type: object
-  securitySchemes:
-    # Se pueden definir esquemas de seguridad (ej. JWT, API Key) aquí en el futuro.
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    SessionRequest:
+      type: object
+      required:
+        - session_id
+      properties:
+        session_id:
+          type: string
+          format: uuid
+
+    ChatAgentRequest:
+      type: object
+      required:
+        - session_id
+        - message
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    ModelTrainRequest:
+      type: object
+      required:
+        - session_id
+        - model_type
+        - target_column
+        - feature_columns
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        model_type:
+          type: string
+          enum: ["random_forest", "svm", "linear_regression"]
+        target_column:
+          type: string
+        feature_columns:
+          type: array
+          items:
+            type: string
+
+    QualityReport:
+      type: object
+      properties:
+        health_score:
+          type: number
+          format: float
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              missing_values:
+                type: integer
+              data_type:
+                type: string
