@@ -46,38 +46,73 @@ async def unified_create_session(
     # DELEGATION: This endpoint now directly calls the session bridge.
     return session_bridge.bridge_create_session()
 
+from backend.schemas import ChatRequest
+from backend.app.services.state_store import StateStore
+from backend.interoperability.unified_agent import UnifiedAgent
+from backend.audit.persistent_logger import PersistentLogger
+
 @router.post("/chat/agent")
-async def unified_chat_agent(
-    request: Request,
-    controller: InteropController = Depends(get_interop_controller)
-):
+async def unified_chat_agent(payload: ChatRequest):
     """
     Unified endpoint for the chat agent.
     """
-    # In FASE 3, this will call:
-    # payload = await request.json()
-    # return await controller.bridge_chat(payload)
-    return {"message": "Unified chat agent endpoint is active", "status": "pending_implementation"}
+    session_id = payload.session_id
+    message = payload.message
 
-from backend.services.data_quality_service import DataQualityService, get_data_quality_service
-from pathlib import Path
+    # 1. Cargar sesión
+    # NOTE: Direct instantiation as per restoration plan.
+    session = StateStore().get_session(session_id)
 
-TEMP_STORAGE_PATH = Path("backend/data/.tmp/ingestion")
+    # 2. Enviar al agente unificado
+    agent = UnifiedAgent(session=session)
+    response = agent.run(message)
+
+    # 3. Registrar paso
+    PersistentLogger().log_step(session_id, "agent_response", response)
+
+    return {"response": response}
+
+from backend.schemas import SessionRequest
+
+from backend.interoperability.mpa_controller import MpaController
+
+# --- Functional Endpoints ---
+# These endpoints are now connected to the UnifiedAgent, providing a consistent
+# entry point for all analysis tasks.
 
 @router.post("/quality/report")
-async def unified_quality_report(
-    session_id: str = Body(..., embed=True),
-    service: DataQualityService = Depends(get_data_quality_service)
-):
+async def unified_quality_report(payload: SessionRequest):
     """
-    Unified endpoint for generating a data quality report from a session_id.
+    Generates a data quality report for the session by directly calling the MPA controller.
     """
-    file_path = TEMP_STORAGE_PATH / session_id / "ingestion_result.csv"
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="No data found for the given session ID.")
+    session = StateStore().get_session(payload.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    df = pd.read_csv(file_path)
-    report = service.get_quality_report(df)
+    mpa_controller = MpaController(session)
+    report = mpa_controller.execute_quality_report()
     return report
 
-# Additional unified endpoints for EDA, quality, ML, etc., will be added here.
+@router.post("/eda/report")
+async def unified_eda_report(payload: SessionRequest):
+    """
+    Generates an Exploratory Data Analysis (EDA) report for the session.
+    (Placeholder pending MPA service implementation)
+    """
+    return {"message": "EDA report endpoint is active", "status": "pending_implementation"}
+
+@router.post("/ml/train")
+async def unified_ml_train(payload: SessionRequest):
+    """
+    Trains a machine learning model based on the session data.
+    (Placeholder pending MPA service implementation)
+    """
+    return {"message": "ML training endpoint is active", "status": "pending_implementation"}
+
+@router.get("/visualizations")
+async def unified_visualizations(session_id: str):
+    """
+    Retrieves all generated visualizations for the session.
+    (Placeholder pending MPA service implementation)
+    """
+    return {"message": "Visualizations endpoint is active", "status": "pending_implementation"}

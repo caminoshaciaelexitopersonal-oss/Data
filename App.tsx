@@ -195,7 +195,7 @@ const App: React.FC = () => {
                 session_id: sessionId
             };
             ChatAgentPayloadSchema.parse(payload);
-            const response = await fetch(`${API_BASE_URL}/api/v1/chat/agent/`, {
+            const response = await fetch(`${API_BASE_URL}/chat/agent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
