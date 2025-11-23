@@ -76,8 +76,20 @@ def create_app():
     from backend.app.api import unified_router
     app.include_router(unified_router.router)
 
-    # --- Legacy & Stable Routers ---
-    app.include_router(core.router, prefix="/api/v1", tags=["Core (Legacy)"])
-    app.include_router(ingestion_orchestrator.router, prefix="/api/v1", tags=["Ingestion Orchestrator"])
+    # --- SADI Rescue Plan: Phase 3 ---
+    # This is the new, canonical router for all SADI functionality.
+    # All future development should target this router.
+    from backend.app.api import sadi_router
+    app.include_router(sadi_router.router, prefix="/sadi/v1", tags=["SADI - Canonical API v1"])
+
+    # --- SADI Rescue Plan: Phase 1 (Now Deprecated) ---
+    # This compatibility router mirrors all existing endpoints under a single
+    # stable prefix to allow the frontend to work without breaking changes.
+    from backend.app.api import compat_router
+    app.include_router(compat_router.router, prefix="/compat/v1", tags=["DEPRECATED - Compatibility Layer"])
+
+    # --- Legacy & Stable Routers (Now Deprecated) ---
+    app.include_router(core.router, prefix="/api/v1", tags=["DEPRECATED - Core (Legacy)"])
+    app.include_router(ingestion_orchestrator.router, prefix="/api/v1", tags=["DEPRECATED - Ingestion Orchestrator"])
 
     return app

@@ -7,6 +7,9 @@ WORKDIR /app
 # Añade el directorio de la aplicación a PYTHONPATH
 ENV PYTHONPATH "${PYTHONPATH}:/app"
 
+# Instala libmagic, la dependencia del sistema para python-magic
+RUN apt-get update && apt-get install -y libmagic1
+
 # Copia el archivo de requerimientos al directorio de trabajo
 COPY ./requirements.txt .
 

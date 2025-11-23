@@ -31,6 +31,7 @@ python-docx
 docx2pdf
 statsmodels
 nbformat
+python-magic
 
 # Testing dependencies
 pytest
