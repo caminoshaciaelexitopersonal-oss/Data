@@ -27,10 +27,18 @@ def create_app():
     # Initialize MLflow tracking URI
     mlflow.set_tracking_uri("http://mlflow:5000")
 
-    # --- Unified Interoperability Router ---
+ 
+    # --- Routers ---
+    # Unified Interoperability Router (MCP, core MPAs)
     from backend.app.api import unified_router
     app.include_router(unified_router.router)
 
+    # Automated Analysis Workflow Router (WPA)
+    from backend.wpa.auto_analysis import api as auto_analysis_api
+    app.include_router(auto_analysis_api.router)
+
+
+ 
     # Startup event to log all registered routes for easier debugging
     @app.on_event("startup")
     async def startup_event():
