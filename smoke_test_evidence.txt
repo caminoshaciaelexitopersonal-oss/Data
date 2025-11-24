@@ -1,0 +1,13 @@
+--- STARTING CONTEXT VERIFICATION SMOKE TEST ---
+Creating new session...
+SUCCESS: Session created with ID: 8418bb09-a1b4-469d-ace4-2ab8feb07194
+
+Uploading population data (poblacion.csv)...
+{"filename":"poblacion.csv","message":"File processed and associated with session 8418bb09-a1b4-469d-ace4-2ab8feb07194."}
+Asking the agent: '¿Cuál es la ciudad con mayor población?'
+Agent Response: {"output":"An unexpected error occurred: Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."}
+
+Verifying the response...
+FAILURE: Agent did not provide the expected response.
+
+--- SMOKE TEST FAILED ---
