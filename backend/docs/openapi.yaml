@@ -30,7 +30,6 @@ paths:
               properties:
                 session_id:
                   type: string
-                  format: uuid
                 file:
                   type: string
                   format: binary
@@ -44,9 +43,6 @@ paths:
                 properties:
                   message:
                     type: string
-                  session_id:
-                    type: string
-                    format: uuid
                   filename:
                     type: string
 
@@ -68,7 +64,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/QualityReport'
 
-  /unified/v1/chat/agent/:
+  /unified/v1/chat:
     post:
       summary: "Chat with Agent"
       operationId: "chat_agent"
@@ -89,20 +85,6 @@ paths:
                   output:
                     type: string
 
-  /unified/v1/wpa/modeling/train:
-    post:
-      summary: "Train Model (WPA)"
-      operationId: "train_model_wpa"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ModelTrainRequest'
-      responses:
-        '200':
-          description: "Model training started."
-
 components:
   schemas:
     Session:
@@ -122,7 +104,6 @@ components:
       properties:
         session_id:
           type: string
-          format: uuid
 
     ChatAgentRequest:
       type: object
@@ -132,30 +113,8 @@ components:
       properties:
         session_id:
           type: string
-          format: uuid
         message:
           type: string
-
-    ModelTrainRequest:
-      type: object
-      required:
-        - session_id
-        - model_type
-        - target_column
-        - feature_columns
-      properties:
-        session_id:
-          type: string
-          format: uuid
-        model_type:
-          type: string
-          enum: ["random_forest", "svm", "linear_regression"]
-        target_column:
-          type: string
-        feature_columns:
-          type: array
-          items:
-            type: string
 
     QualityReport:
       type: object

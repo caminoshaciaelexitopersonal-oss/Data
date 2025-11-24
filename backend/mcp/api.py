@@ -5,7 +5,7 @@ from typing import Optional, Dict
 from backend.mcp.service import McpService, get_mcp_service
 from backend.mcp.schemas import Session, Job, Step
 
-router = APIRouter(prefix="/mcp", tags=["MCP - Main Control Plane"])
+router = APIRouter(tags=["MCP - Main Control Plane"])
 
 @router.post("/session/create", response_model=Session)
 def create_session(service: McpService = Depends(get_mcp_service)):
