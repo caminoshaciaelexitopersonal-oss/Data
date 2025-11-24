@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Dict, Any, List
+ 
 import os
 import json
 import matplotlib.pyplot as plt
@@ -20,12 +21,14 @@ class EDAIntelligentService:
 
     def _classify_variables(self) -> Dict[str, str]:
         """Refines the initial type inference into more specific statistical types."""
+ 
         classified = {}
         for col, base_type in self.inferred_types.items():
             if base_type == 'numeric':
                 unique_count = self.df[col].nunique()
                 if unique_count == 2:
                     classified[col] = 'binary'
+ 
                 elif unique_count < 20:
                     classified[col] = 'numeric_discrete'
                 else:
@@ -37,11 +40,13 @@ class EDAIntelligentService:
 
     def run_automated_eda(self):
         """Generates and saves a comprehensive EDA report."""
+ 
         eda_results = {
             "variable_classification": self.classified_types,
             "summary_statistics": self._get_summary_stats(),
             "missing_values_report": self._get_missing_report(),
             "outlier_report": self._detect_outliers()
+ 
         }
 
         # Save JSON report
@@ -71,6 +76,7 @@ class EDAIntelligentService:
 
     def _detect_outliers(self, iqr_multiplier: float = 1.5) -> Dict[str, List[Any]]:
         """Detects outliers in numeric columns using the IQR method."""
+ 
         outliers = {}
         for col, var_type in self.classified_types.items():
             if var_type.startswith('numeric'):
@@ -79,11 +85,14 @@ class EDAIntelligentService:
                 IQR = Q3 - Q1
                 lower_bound = Q1 - iqr_multiplier * IQR
                 upper_bound = Q3 + iqr_multiplier * IQR
+ 
                 col_outliers = self.df[(self.df[col] < lower_bound) | (self.df[col] > upper_bound)][col].tolist()
+ 
                 if col_outliers:
                     outliers[col] = col_outliers
         return outliers
 
+ 
     def _generate_visualizations(self):
         """Generates and saves plots for relevant columns."""
         for col, var_type in self.classified_types.items():
@@ -115,3 +124,4 @@ def run_eda(df: pd.DataFrame, inferred_types: Dict[str, str], job_id: str):
     """
     service = EDAIntelligentService(df, inferred_types, job_id)
     service.run_automated_eda()
+ 

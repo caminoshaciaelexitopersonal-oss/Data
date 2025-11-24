@@ -1,8 +1,11 @@
+ 
 from fastapi import APIRouter, Depends, HTTPException
+ 
 from pydantic import BaseModel
 import pandas as pd
 from typing import Dict, Any
 import uuid
+ 
 import mlflow
 import hashlib
 
@@ -14,10 +17,12 @@ from backend.wpa.auto_analysis.model_trainer import train_and_select_model
 # ... other imports
 
 router = APIRouter(prefix="/wpa/auto-analysis", tags=["WPA - Automated Analysis"])
+ 
 job_store: Dict[str, Dict[str, Any]] = {}
 
 class SubmitRequest(BaseModel):
     session_id: str
+ 
     user_id: str = "default_user" # Example field
 
 @celery_app.task(name="wpa.run_full_analysis_pipeline")
@@ -69,8 +74,11 @@ def submit_auto_analysis_job(request: SubmitRequest):
 def get_job_status(job_id: str):
     job = job_store.get(job_id)
     if not job: raise HTTPException(status_code=404, detail="Job not found.")
+ 
     return job
 
 @router.get("/{job_id}/report")
 def get_job_report(job_id: str):
+ 
     raise HTTPException(status_code=501, detail="Report retrieval not fully implemented in this phase.")
+ 

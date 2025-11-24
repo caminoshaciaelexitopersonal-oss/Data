@@ -1,6 +1,7 @@
 import pandas as pd
 import shap
 from sklearn.pipeline import Pipeline
+ 
 import matplotlib.pyplot as plt
 import os
 import mlflow
@@ -58,3 +59,4 @@ def generate_model_explanations(pipeline: Pipeline, X: pd.DataFrame, job_id: str
     """Entrypoint to run the full explainability process."""
     engine = ExplainabilityEngine(pipeline, X, job_id)
     engine.generate_and_save_explanations()
+ 

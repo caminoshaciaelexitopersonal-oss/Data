@@ -1,12 +1,16 @@
 import pandas as pd
+ 
 from sklearn.model_selection import cross_validate
 from typing import Dict, Any
 import mlflow
+ 
 
 from backend.wpa.auto_analysis.pipeline_builder import get_classification_pipelines, get_regression_pipelines
 
 class ModelTrainer:
+ 
     # ... (init and _determine_problem_type methods remain the same) ...
+ 
     def __init__(self, df: pd.DataFrame, target_variable: str, classified_types: Dict[str, str]):
         self.df = df
         self.target = target_variable
@@ -18,6 +22,7 @@ class ModelTrainer:
         self.categorical_features = [col for col in self.features if self.classified_types.get(col, '').startswith('categorical')]
 
     def _determine_problem_type(self) -> str:
+ 
         target_type = self.classified_types.get(self.target)
         if target_type in ['binary', 'categorical_nominal']: return 'classification'
         elif target_type.startswith('numeric'): return 'regression'
@@ -25,12 +30,14 @@ class ModelTrainer:
 
     def run_training_and_evaluation(self) -> Dict[str, Any]:
         """Orchestrates model training, evaluation, and logging to MLflow."""
+ 
         X = self.df.drop(columns=[self.target])
         y = self.df[self.target]
 
         if self.problem_type == 'classification':
             pipelines = get_classification_pipelines(self.numeric_features, self.categorical_features)
             scoring_metrics = ['accuracy', 'f1_weighted', 'roc_auc_ovr']
+ 
             primary_metric = 'f1_weighted'
         else:
             pipelines = get_regression_pipelines(self.numeric_features, self.categorical_features)
@@ -72,3 +79,4 @@ class ModelTrainer:
 def train_and_select_model(df: pd.DataFrame, target: str, classified_types: Dict[str, str]) -> Dict[str, Any]:
     trainer = ModelTrainer(df, target, classified_types)
     return trainer.run_training_and_evaluation()
+ 
