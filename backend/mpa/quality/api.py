@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import Dict, Any
 from pydantic import BaseModel
 
-from backend.services.data_quality_service import DataQualityService, get_data_quality_service
+from backend.mpa.quality.service import DataQualityService, get_data_quality_service
 from backend.app.services.state_store import StateStore, get_state_store
 
-router = APIRouter(prefix="/mpa/quality", tags=["MPA - Data Quality"])
+router = APIRouter(tags=["MPA - Data Quality"])
 
 class SessionRequest(BaseModel):
     """Defines the standard request model for session-based operations."""
