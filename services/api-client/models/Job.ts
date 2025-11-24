@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type Session = {
+export type Job = {
+    job_id?: string;
     session_id?: string;
+    type?: string;
     created_at?: string;
     status?: string;
 };
