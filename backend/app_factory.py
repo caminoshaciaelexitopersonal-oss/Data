@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -10,10 +11,11 @@ def create_app():
     # Add Hardening Middleware first to process requests early
     app.add_middleware(HardeningMiddleware)
 
-    # Configure CORS
+    # Configure CORS using environment variables for flexibility
+    origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -26,9 +28,17 @@ def create_app():
     mlflow.set_tracking_uri("http://mlflow:5000")
 
     # --- Unified Interoperability Router ---
-    # This is now the ONLY entry point for all stable, interoperable functionality.
-    # All other routers have been removed to eliminate conflicts.
     from backend.app.api import unified_router
     app.include_router(unified_router.router)
+
+    # Startup event to log all registered routes for easier debugging
+    @app.on_event("startup")
+    async def startup_event():
+        print("--- Registered Routes ---")
+        for route in app.routes:
+            if hasattr(route, "methods"):
+                print(f"Path: {route.path}, Methods: {list(route.methods)}")
+        print("-------------------------")
+
 
     return app

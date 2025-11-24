@@ -19,8 +19,11 @@ export type OpenAPIConfig = {
     ENCODE_PATH?: ((path: string) => string) | undefined;
 };
 
+// Default BASE to environment variable or localhost for development
+const VITE_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8000";
+
 export const OpenAPI: OpenAPIConfig = {
-    BASE: 'http://localhost:8000',
+    BASE: VITE_API_BASE_URL,
     VERSION: '1.0.0',
     WITH_CREDENTIALS: false,
     CREDENTIALS: 'include',
