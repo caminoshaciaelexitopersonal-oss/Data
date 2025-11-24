@@ -1,17 +1,12 @@
 import React, { useReducer, useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { initialState, reducer } from './reducer';
 import { ToastMessage } from './components/Toast';
 import { ChatView } from './components/ChatView';
 import { DataSourceModal } from './components/DataSourceModal';
 import { CodeViewerModal } from './components/CodeViewerModal';
-import { VisualAnalyticsBoard } from './components/VisualAnalyticsBoard';
-import { PromptTraceModal } from './features/prompt-trace/PromptTraceModal';
-import { CodeIcon, ChartIcon } from './components/icons';
+import { CodeIcon } from './components/icons';
 // Import the generated API client
-import { OpenAPI, DefaultService, QualityReport } from './services/api-client';
-
-OpenAPI.BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000");
+import { DefaultService, QualityReport } from './services/api-client';
 
 const SheetSelectionModal: React.FC<{
     sheetNames: string[];
@@ -44,8 +39,6 @@ const App: React.FC = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [isDataSourceModalOpen, setIsDataSourceModalOpen] = useState(false);
     const [isCodeViewerModalOpen, setIsCodeViewerModalOpen] = useState(false);
-    const [isPromptTraceModalOpen, setIsPromptTraceModalOpen] = useState(false);
-    const [currentView, setCurrentView] = useState<'chat' | 'dashboard'>('chat');
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [llmPreference, setLlmPreference] = useState<'gemini' | 'openai' | 'ollama'>('gemini');
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -151,11 +144,12 @@ const App: React.FC = () => {
             setIsDataSourceModalOpen(true);
             return { output: "Claro, por favor selecciona una fuente de datos." };
         }
-        if (lowerCaseMessage.includes("panel") || lowerCaseMessage.includes("dashboard") || lowerCaseMessage.includes("visualización")) {
-            setCurrentView('dashboard');
-            return { output: "Claro, abriendo el Panel de Visualización Analítica." };
-        }
-        // Check if a file has been loaded by looking at the fileName in state.
+        // DEPRECATED: Dashboard functionality is removed until fixed.
+        // if (lowerCaseMessage.includes("panel") || lowerCaseMessage.includes("dashboard") || lowerCaseMessage.includes("visualización")) {
+        //     setCurrentView('dashboard');
+        //     return { output: "Claro, abriendo el Panel de Visualización Analítica." };
+        // }
+
         if (!state.fileName) {
             throw new Error("No hay datos cargados. Por favor, carga un archivo o conéctate a una base de datos primero.");
         }
@@ -165,10 +159,6 @@ const App: React.FC = () => {
                 session_id: sessionId,
                 message: message
             });
-
-            if (agentResponse.output) {
-                setCurrentView('dashboard');
-            }
 
             return agentResponse;
         } catch (error) {
@@ -182,7 +172,6 @@ const App: React.FC = () => {
             {sheetModalState.isOpen && ( <SheetSelectionModal sheetNames={sheetModalState.sheetNames} onSelectSheet={(sheetName) => handleSheetSelection(sheetName, sheetModalState.file)} onClose={() => setSheetModalState({ isOpen: false, file: null, sheetNames: [] })} /> )}
             {isDataSourceModalOpen && ( <DataSourceModal onFileLoad={(file) => { handleFileLoad(file); setIsDataSourceModalOpen(false); }} onExcelFileLoad={(file) => { handleExcelFileLoad(file); setIsDataSourceModalOpen(false); }} onDbConnect={(uri, query) => { handleDbConnect(uri, query); setIsDataSourceModalOpen(false); }} onClose={() => setIsDataSourceModalOpen(false)} /> )}
             {isCodeViewerModalOpen && ( <CodeViewerModal onClose={() => setIsCodeViewerModalOpen(false)} session_id={sessionId ?? ""} /> )}
-            {isPromptTraceModalOpen && ( <PromptTraceModal onClose={() => setIsPromptTraceModalOpen(false)} /> )}
 
             <header className="p-4 border-b border-gray-700 flex justify-between items-center">
                 <h1 className="text-xl font-bold">Sistema de Analítica de Datos Inteligente (SADI)</h1>
@@ -201,33 +190,16 @@ const App: React.FC = () => {
                         </select>
                     </div>
                     <button
-                        onClick={() => setCurrentView(currentView === 'chat' ? 'dashboard' : 'chat')}
-                        className="bg-purple-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        <ChartIcon className="w-4 h-4" />
-                        {currentView === 'chat' ? 'Ver Panel' : 'Ver Chat'}
-                    </button>
-                    <button
                         onClick={() => setIsCodeViewerModalOpen(true)}
                         className="bg-blue-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <CodeIcon className="w-4 h-4" /> Ver Pasos y Código
                     </button>
-                    <button
-                        onClick={() => setIsPromptTraceModalOpen(true)}
-                        className="bg-teal-600 text-white flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-                    >
-                        <CodeIcon className="w-4 h-4" /> Ver Trazas de Prompts
-                    </button>
                 </div>
             </header>
 
             <main className="flex-1 overflow-y-auto">
-                {currentView === 'chat' ? (
-                    <ChatView onSendMessage={handleUserMessage} session_id={sessionId} />
-                ) : (
-                    <VisualAnalyticsBoard />
-                )}
+                <ChatView onSendMessage={handleUserMessage} session_id={sessionId} />
             </main>
             <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         </div>
