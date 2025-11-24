@@ -3,8 +3,9 @@ fastapi
 uvicorn[standard]
 pandas
 scikit-learn
-# Pinning to recent, stable versions to ensure compatibility with modern APIs
-langchain>=0.1.0
+ 
+langchain<0.1,>=0.0.354
+  main
 langchain-openai
 langchain-google-genai>=1.0.1
 langchain-experimental
@@ -14,6 +15,7 @@ langchainhub
 python-multipart
 openpyxl
 sqlalchemy
+tabulate
 scipy
 matplotlib
 seaborn

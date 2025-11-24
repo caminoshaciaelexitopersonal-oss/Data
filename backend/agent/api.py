@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.llm import llm_router
 from backend.app.services.state_store import StateStore, get_state_store
@@ -18,25 +19,28 @@ async def chat_agent(
 ) -> Dict[str, Any]:
     """
     Handles a chat message by invoking the intelligent agent with the
-    message and the context from the current session.
+    message and the context from the current session, following the correct
+    LangChain message structure.
     """
     try:
-        # Here you would typically load context, history, or data from the session
-        # For now, we just pass the message to the LLM router.
         df = state_store.load_dataframe(session_id=request.session_id)
         if df is None:
             raise HTTPException(status_code=404, detail=f"No data found for session_id: {request.session_id}. Please upload a file first.")
 
-        # Construct a more informative prompt
-        prompt = f"""
-        Based on the user's request, analyze the following data snippet:
-        {df.head().to_string()}
+        # Construct the context as a SystemMessage
+        context = f"""
+        You are a data analysis assistant. Your task is to answer questions based on the following dataset.
+        Provide clear, concise answers and do not make up information.
 
-        User's request: "{request.message}"
+        Dataset context (first 5 rows in Markdown format):
+        {df.head().to_markdown()}
         """
 
-        # Use the LLM router to get a response
-        response = llm_router.run(prompt=prompt, task_type="analysis")
+        system_message = SystemMessage(content=context)
+        human_message = HumanMessage(content=request.message)
+
+        # Pass the structured messages to the LLM router
+        response = llm_router.run(prompt=[system_message, human_message], task_type="analysis")
 
         if response["status"] == "error":
             raise HTTPException(status_code=500, detail=response["output"])
@@ -44,8 +48,6 @@ async def chat_agent(
         return {"output": response["output"]}
 
     except HTTPException as http_exc:
-        # Re-raise HTTPException to let FastAPI handle it
         raise http_exc
     except Exception as e:
-        # Catch any other exceptions and return a generic 500 error
         return {"output": f"An unexpected error occurred: {e}"}
