@@ -14,10 +14,6 @@ from backend.wpa.auto_analysis.model_trainer import train_and_select_model
 # ... other imports
 
 router = APIRouter(prefix="/wpa/auto-analysis", tags=["WPA - Automated Analysis"])
-
-# NOTE: This is an in-memory store for job status.
-# For a production system, this should be replaced with a persistent
-# key-value store like Redis to ensure job states are not lost on restart.
 job_store: Dict[str, Dict[str, Any]] = {}
 
 class SubmitRequest(BaseModel):
@@ -56,11 +52,13 @@ def submit_auto_analysis_job(request: SubmitRequest):
     """Submits a new analysis job and starts an MLflow run."""
     job_id = str(uuid.uuid4())
 
+    # Create MLflow run
     experiment_name = "Automated Analysis"
     mlflow.set_experiment(experiment_name)
     run = mlflow.start_run()
     mlflow.set_tag("job_id", job_id)
     mlflow.set_tag("user_id", request.user_id)
+    # Could also add git_commit tag here
 
     run_full_analysis_pipeline_task.delay(job_id, request.session_id, run.info.run_id)
     job_store[job_id] = {"status": "queued", "stage": "Awaiting worker", "mlflow_run_id": run.info.run_id}
