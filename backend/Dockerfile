@@ -10,15 +10,20 @@ ENV PYTHONPATH=/app
 # Instala libmagic, la dependencia del sistema para python-magic
 RUN apt-get update && apt-get install -y libmagic1
 
+# variable dummy que cambia cada build
+ARG CACHEBUST=1
+
 # Copia el archivo de requerimientos al directorio de trabajo
-COPY ./requirements.txt .
+COPY backend/requirements.txt .
 
 # Instala los requerimientos
 RUN pip install setuptools
 RUN pip install --no-cache-dir -r requirements.txt
+# Parche de emergencia para instalar tabulate
+RUN pip install tabulate
 
 # Copia el resto del código de la aplicación a un subdirectorio 'backend'
-COPY . ./backend
+COPY backend/ ./backend
 
 # Expone el puerto 8000 para que FastAPI sea accesible
 EXPOSE 8000

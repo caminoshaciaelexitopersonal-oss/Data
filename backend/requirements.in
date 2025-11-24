@@ -5,7 +5,6 @@ pandas
 scikit-learn
  
 langchain<0.1,>=0.0.354
-  main
 langchain-openai
 langchain-google-genai>=1.0.1
 langchain-experimental

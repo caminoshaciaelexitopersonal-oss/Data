@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Load API keys and base URLs securely from environment variables
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
 
 # --- Model Clients ---
 def _get_gemini_client() -> ChatGoogleGenerativeAI:
@@ -30,7 +30,7 @@ def _get_openai_client() -> ChatOpenAI:
 
 def _get_ollama_client(model: str = "llama3") -> Ollama:
     """Initializes and returns the Ollama client only if OLLAMA_BASE_URL is set."""
-    if not os.getenv("OLLAMA_BASE_URL"):
+    if not OLLAMA_BASE_URL:
         return None
     # Note: This assumes the Ollama service is reachable.
     # A real implementation should have a health check.
