@@ -3,7 +3,7 @@ from fastapi import APIRouter, File, UploadFile, Depends, Form
 from backend.mpa.ingestion.service import IngestionService
 
 # --- API Router for Ingestion MPA ---
-router = APIRouter(prefix="/mpa/ingestion", tags=["MPA - Ingestion"])
+router = APIRouter(tags=["MPA - Ingestion"])
 
 # --- Dependency Injection for the Service ---
 def get_ingestion_service():

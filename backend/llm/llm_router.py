@@ -19,6 +19,7 @@ def _get_gemini_client() -> ChatGoogleGenerativeAI:
     """Initializes and returns the Gemini client if the API key is available."""
     if not GOOGLE_API_KEY:
         return None
+    # Forcing the standard, most common model name after dependency updates.
     return ChatGoogleGenerativeAI(model="gemini-pro", temperature=0, google_api_key=GOOGLE_API_KEY)
 
 def _get_openai_client() -> ChatOpenAI:

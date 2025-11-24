@@ -3,9 +3,10 @@ fastapi
 uvicorn[standard]
 pandas
 scikit-learn
-langchain
+# Pinning to recent, stable versions to ensure compatibility with modern APIs
+langchain>=0.1.0
 langchain-openai
-langchain-google-genai
+langchain-google-genai>=1.0.1
 langchain-experimental
 langchainhub
 
