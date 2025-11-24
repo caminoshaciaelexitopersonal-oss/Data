@@ -19,6 +19,7 @@ def _get_gemini_client() -> ChatGoogleGenerativeAI:
     """Initializes and returns the Gemini client if the API key is available."""
     if not GOOGLE_API_KEY:
         return None
+    # Forcing the standard, most common model name after dependency updates.
     return ChatGoogleGenerativeAI(model="gemini-pro", temperature=0, google_api_key=GOOGLE_API_KEY)
 
 def _get_openai_client() -> ChatOpenAI:
@@ -49,14 +50,14 @@ def _select_model_by_task(task_type: str) -> str:
 
 # --- Main Router Logic ---
 def run(
-    prompt: str,
+    prompt: list,  # Now expects a list of LangChain messages
     task_type: str = "analysis",
     model_preference: str = None
 ) -> Dict[str, Any]:
     """
     Selects and runs the appropriate LLM based on task, preference, and availability.
 
-    :param prompt: The input prompt for the LLM.
+    :param prompt: The input prompt for the LLM, as a list of LangChain messages.
     :param task_type: The type of task (e.g., 'analysis', 'writing').
     :param model_preference: A user-specified model preference ('gemini', 'openai', 'ollama').
     :return: A standardized dictionary with the LLM's response.

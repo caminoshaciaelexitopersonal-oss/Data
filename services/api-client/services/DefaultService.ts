@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ChatAgentRequest } from '../models/ChatAgentRequest';
-import type { ModelTrainRequest } from '../models/ModelTrainRequest';
 import type { QualityReport } from '../models/QualityReport';
 import type { Session } from '../models/Session';
 import type { SessionRequest } from '../models/SessionRequest';
@@ -35,7 +34,6 @@ export class DefaultService {
         },
     ): CancelablePromise<{
         message?: string;
-        session_id?: string;
         filename?: string;
     }> {
         return __request(OpenAPI, {
@@ -74,23 +72,7 @@ export class DefaultService {
     }> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/unified/v1/chat/agent/',
-            body: requestBody,
-            mediaType: 'application/json',
-        });
-    }
-    /**
-     * Train Model (WPA)
-     * @param requestBody
-     * @returns any Model training started.
-     * @throws ApiError
-     */
-    public static trainModelWpa(
-        requestBody: ModelTrainRequest,
-    ): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/unified/v1/wpa/modeling/train',
+            url: '/unified/v1/chat',
             body: requestBody,
             mediaType: 'application/json',
         });

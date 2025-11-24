@@ -3,7 +3,7 @@ fastapi
 uvicorn[standard]
 pandas
 scikit-learn
-langchain
+langchain<0.1,>=0.0.354
 langchain-openai
 langchain-google-genai
 langchain-experimental
@@ -13,6 +13,7 @@ langchainhub
 python-multipart
 openpyxl
 sqlalchemy
+tabulate
 scipy
 matplotlib
 seaborn
