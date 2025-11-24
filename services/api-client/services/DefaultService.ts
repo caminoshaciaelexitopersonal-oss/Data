@@ -3,9 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ChatAgentRequest } from '../models/ChatAgentRequest';
+import type { Job } from '../models/Job';
 import type { QualityReport } from '../models/QualityReport';
 import type { Session } from '../models/Session';
 import type { SessionRequest } from '../models/SessionRequest';
+import type { Step } from '../models/Step';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -19,6 +21,71 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/unified/v1/mcp/session/create',
+        });
+    }
+    /**
+     * Get Session
+     * @param sessionId
+     * @returns Session Session retrieved successfully.
+     * @throws ApiError
+     */
+    public static getSession(
+        sessionId: string,
+    ): CancelablePromise<Session> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/unified/v1/mcp/session/{session_id}',
+            path: {
+                'session_id': sessionId,
+            },
+            errors: {
+                404: `Session not found.`,
+            },
+        });
+    }
+    /**
+     * Create Job
+     * @param requestBody
+     * @returns Job Job created successfully.
+     * @throws ApiError
+     */
+    public static createJob(
+        requestBody: {
+            session_id: string;
+            job_type: string;
+        },
+    ): CancelablePromise<Job> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/unified/v1/mcp/job/start',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                404: `Session not found.`,
+            },
+        });
+    }
+    /**
+     * Create Step
+     * @param requestBody
+     * @returns Step Step created successfully.
+     * @throws ApiError
+     */
+    public static createStep(
+        requestBody: {
+            job_id: string;
+            description: string;
+            payload?: Record<string, any> | null;
+        },
+    ): CancelablePromise<Step> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/unified/v1/mcp/step',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                404: `Job not found.`,
+            },
         });
     }
     /**

@@ -7,6 +7,10 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          // Proxy API requests to the backend during development
+          '/unified': 'http://localhost:8000'
+        }
       },
       plugins: [react()],
       // La clave de API ha sido eliminada del frontend por seguridad.
