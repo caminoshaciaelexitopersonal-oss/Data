@@ -3,7 +3,6 @@ fastapi
 uvicorn[standard]
 pandas
 scikit-learn
-celery[redis]
 langchain
 langchain-openai
 langchain-google-genai
@@ -14,13 +13,10 @@ langchainhub
 python-multipart
 openpyxl
 sqlalchemy
-psycopg2-binary
 scipy
 matplotlib
 seaborn
 prometheus-fastapi-instrumentator
-pymongo
-boto3
 httpx
 xlsxwriter
 mlflow
