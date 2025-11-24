@@ -19,8 +19,6 @@ COPY backend/requirements.txt .
 # Instala los requerimientos
 RUN pip install setuptools
 RUN pip install --no-cache-dir -r requirements.txt
-# Parche de emergencia para instalar tabulate
-RUN pip install tabulate
 
 # Copia el resto del código de la aplicación a un subdirectorio 'backend'
 COPY backend/ ./backend
