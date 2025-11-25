@@ -1,33 +1,23 @@
-# ---- Etapa de Construcción ----
-FROM node:20-alpine AS build
-
-# Establecer el directorio de trabajo
+# ---- Etapa de Dependencias ----
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Copiar package.json y package-lock.json
-COPY package.json ./
-COPY package-lock.json ./
-
-# Instalar dependencias
+COPY web/package.json web/package-lock.json* ./
 RUN npm install
 
-# Copiar el resto de los archivos de la aplicación
-COPY . .
-
-# Construir la aplicación para producción
+# ---- Etapa de Construcción ----
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY web/ ./
 RUN npm run build
 
-# ---- Etapa de Servidor ----
-FROM nginx:stable-alpine AS production
-
-# Copiar los archivos construidos desde la etapa de build
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copiar una configuración personalizada de Nginx si es necesario
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Exponer el puerto 80
-EXPOSE 80
-
-# Comando para iniciar Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# ---- Etapa de Producción ----
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+EXPOSE 3000
+CMD ["npm", "start"]

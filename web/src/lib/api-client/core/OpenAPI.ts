@@ -19,11 +19,10 @@ export type OpenAPIConfig = {
     ENCODE_PATH?: ((path: string) => string) | undefined;
 };
 
-// Default BASE to environment variable or localhost for development
-const VITE_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8000";
-
+// The BASE path is set to an empty string to make all API calls relative.
+// This is the most robust approach for working with proxies.
 export const OpenAPI: OpenAPIConfig = {
-    BASE: VITE_API_BASE_URL,
+    BASE: "",
     VERSION: '1.0.0',
     WITH_CREDENTIALS: false,
     CREDENTIALS: 'include',
