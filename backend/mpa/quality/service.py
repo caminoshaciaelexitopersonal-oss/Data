@@ -16,6 +16,7 @@ class DataQualityService:
     def get_quality_report(self, df: pd.DataFrame) -> QualityReport:
         """
         Generates a comprehensive data quality report from a pandas DataFrame.
+        Converts numpy numeric types to native Python types for JSON serialization.
         """
         if not isinstance(df, pd.DataFrame):
             raise TypeError("Input must be a pandas DataFrame.")
@@ -28,11 +29,11 @@ class DataQualityService:
         duplicate_rows = df.duplicated().sum()
 
         overview = {
-            "num_rows": num_rows,
-            "num_cols": num_cols,
-            "total_cells": total_cells,
+            "num_rows": int(num_rows),
+            "num_cols": int(num_cols),
+            "total_cells": int(total_cells),
             "missing_cells": int(missing_cells),
-            "missing_percentage": round(missing_percentage, 2),
+            "missing_percentage": float(round(missing_percentage, 2)),
             "duplicate_rows": int(duplicate_rows),
         }
 
@@ -48,30 +49,28 @@ class DataQualityService:
             stats = {
                 "dtype": dtype,
                 "missing_values": int(missing),
-                "missing_percentage": round(missing_pct, 2),
+                "missing_percentage": float(round(missing_pct, 2)),
                 "unique_values": int(unique_values),
             }
 
             if pd.api.types.is_numeric_dtype(series):
-                stats["mean"] = series.mean()
-                stats["std_dev"] = series.std()
-                stats["min"] = series.min()
-                stats["max"] = series.max()
+                stats["mean"] = float(series.mean())
+                stats["std_dev"] = float(series.std())
+                stats["min"] = float(series.min())
+                stats["max"] = float(series.max())
 
             column_details[str(col)] = stats
 
         # --- Health Score Calculation ---
-        # A simple scoring model: starts at 100 and deducts points for issues.
         score = 100.0
-        score -= missing_percentage * 1.5  # Higher penalty for missing data
+        score -= missing_percentage * 1.5
         score -= (duplicate_rows / num_rows) * 100 if num_rows > 0 else 0
 
-        # Deduct points for columns with very high null rates
         for col_data in column_details.values():
             if col_data["missing_percentage"] > 50:
                 score -= 5
 
-        health_score = max(0, round(score, 2))
+        health_score = float(max(0, round(score, 2)))
 
         return QualityReport(
             overview=overview,

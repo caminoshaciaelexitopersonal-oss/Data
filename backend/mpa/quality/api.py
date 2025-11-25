@@ -22,14 +22,12 @@ def get_quality_report(
     with the given session_id.
     """
     try:
-        # Load the DataFrame from the state store using the session_id
         df = state_store.load_dataframe(session_id=request.session_id)
         if df is None:
             raise HTTPException(status_code=404, detail=f"No data found for session_id: {request.session_id}")
 
-        # Generate the report using the loaded data
         report = service.get_quality_report(df)
-        return report
+        # Explicitly convert the Pydantic model to a dict to match the response_model
+        return report.model_dump()
     except Exception as e:
-        # It's good practice to log the exception here
         raise HTTPException(status_code=500, detail=f"An error occurred while generating the quality report: {e}")
