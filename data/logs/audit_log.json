@@ -1,0 +1,40 @@
+[
+    {
+        "event_id": "9a2ceafb72fd419c217dd10f98f4d108db49463247173f96418f00c94ec00634",
+        "timestamp": "2025-11-15T22:59:12.804507",
+        "event_type": "data_ingestion",
+        "user_or_agent": "user_upload",
+        "source": {
+            "type": "file_upload",
+            "identifier": "test.csv"
+        },
+        "data_details": {
+            "row_count": 2,
+            "column_count": 2,
+            "columns": [
+                "col1",
+                "col2"
+            ],
+            "data_hash": "3f48039b713dc7098d50fc04ca7916111b26cc0dcc9c68c2100fa0b27aa658b4"
+        }
+    },
+    {
+        "event_id": "c84c0bb792bf08d5a7583fd40c9eebfa278631f2fb9883a0f4fe9054b0d542f4",
+        "timestamp": "2025-11-15T23:09:08.079982",
+        "event_type": "data_ingestion",
+        "user_or_agent": "user_upload",
+        "source": {
+            "type": "file_upload",
+            "identifier": "test.csv"
+        },
+        "data_details": {
+            "row_count": 2,
+            "column_count": 2,
+            "columns": [
+                "col1",
+                "col2"
+            ],
+            "data_hash": "3f48039b713dc7098d50fc04ca7916111b26cc0dcc9c68c2100fa0b27aa658b4"
+        }
+    }
+]

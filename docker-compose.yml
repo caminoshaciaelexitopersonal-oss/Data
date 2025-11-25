@@ -1,0 +1,95 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - redis
+      - mlflow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:3000"
+    depends_on:
+      - backend
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: celery -A backend.celery_worker.celery_app worker --loglevel=info
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - redis
+      - mlflow
+
+  mlflow:
+    image: python:3.12-slim
+    command: >
+      sh -c "pip install mlflow psycopg2-binary &&
+             mkdir -p /data/mlruns /data/artifacts &&
+             mlflow server --host 0.0.0.0 --port 5000
+             --backend-store-uri sqlite:////data/mlruns/mlflow.db
+             --default-artifact-root file:/data/artifacts"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/data
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  tester:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    working_dir: /app
+    command: ["python", "-m", "pytest", "backend/tests"]
+    depends_on:
+      - redis
+      - mlflow
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+  mlflow_data: {} # Nuevo volumen para mlflow

@@ -1,0 +1,73 @@
+[
+  {
+    "endpoint": "/mpa/ingestion/upload-file/",
+    "method": "POST",
+    "frontend_payload_format": {
+      "description": "FormData con un campo 'file' que contiene el archivo.",
+      "content_type": "multipart/form-data"
+    },
+    "backend_expected_format": {
+      "description": "Un archivo subido vía 'UploadFile'.",
+      "content_type": "multipart/form-data"
+    },
+    "response_format": {
+      "filename": "string",
+      "data": "List[Dict[str, Any]]",
+      "message": "string"
+    },
+    "errors": [422, 500]
+  },
+  {
+    "endpoint": "/mpa/quality/report",
+    "method": "POST",
+    "frontend_payload_format": {
+      "description": "Un array JSON de objetos.",
+      "schema": "List[Dict[str, Any]]"
+    },
+    "backend_expected_format": {
+      "description": "Un array JSON de objetos.",
+      "schema": "List[Dict[str, Any]]"
+    },
+    "response_format": {
+      "quality_score": "float",
+      "metrics": "object",
+      "suggestions": "List[string]"
+    },
+    "errors": [400, 422, 500]
+  },
+  {
+    "endpoint": "/api/v1/chat/agent/",
+    "method": "POST",
+    "frontend_payload_format": {
+      "message": "string",
+      "data": "List[Dict[str, Any]]",
+      "llm_preference": "string"
+    },
+    "backend_expected_format": {
+      "message": "string",
+      "data": "List[Dict[str, Any]]",
+      "llm_preference": "string"
+    },
+    "response_format": {
+      "output": "Any"
+    },
+    "errors": [422, 500]
+  },
+  {
+    "endpoint": "/mpa/ingestion/multi-upload/",
+    "method": "POST",
+    "frontend_payload_format": {
+      "description": "FormData con un campo 'files' que contiene múltiples archivos.",
+      "content_type": "multipart/form-data"
+    },
+    "backend_expected_format": {
+      "description": "Una lista de archivos subidos vía 'UploadFile'.",
+      "content_type": "multipart/form-data"
+    },
+    "response_format": {
+      "task_id": "string",
+      "message": "string"
+    },
+    "errors": [422, 500]
+  }
+]

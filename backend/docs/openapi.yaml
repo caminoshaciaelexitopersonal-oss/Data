@@ -1,0 +1,256 @@
+openapi: 3.0.0
+info:
+  title: "SADI - Unified API"
+  version: "1.0.0"
+  description: "The single source of truth for the SADI API, enforcing a session-state architecture."
+
+paths:
+  /unified/v1/mcp/session/create:
+    post:
+      summary: "Create Session"
+      operationId: "create_session"
+      responses:
+        '200':
+          description: "Session created successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /unified/v1/mcp/session/{session_id}:
+    get:
+      summary: "Get Session"
+      operationId: "get_session"
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: "Session retrieved successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: "Session not found."
+
+  /unified/v1/mcp/job/start:
+    post:
+      summary: "Create Job"
+      operationId: "create_job"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - job_type
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                job_type:
+                  type: string
+      responses:
+        '200':
+          description: "Job created successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: "Session not found."
+
+  /unified/v1/mcp/step:
+    post:
+      summary: "Create Step"
+      operationId: "create_step"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - job_id
+                - description
+              properties:
+                job_id:
+                  type: string
+                  format: uuid
+                description:
+                  type: string
+                payload:
+                  type: object
+                  nullable: true
+      responses:
+        '200':
+          description: "Step created successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Step'
+        '404':
+          description: "Job not found."
+
+  /unified/v1/mpa/ingestion/upload-file/:
+    post:
+      summary: "Upload File"
+      operationId: "upload_file"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                session_id:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: "File uploaded and processed successfully."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  filename:
+                    type: string
+
+  /unified/v1/mpa/quality/report:
+    post:
+      summary: "Get Data Quality Report"
+      operationId: "get_quality_report"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionRequest'
+      responses:
+        '200':
+          description: "Data quality report generated successfully."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityReport'
+
+  /unified/v1/chat:
+    post:
+      summary: "Chat with Agent"
+      operationId: "chat_agent"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatAgentRequest'
+      responses:
+        '200':
+          description: "Agent response."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output:
+                    type: string
+
+components:
+  schemas:
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    Job:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    Step:
+      type: object
+      properties:
+        step_id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        payload:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+    SessionRequest:
+      type: object
+      required:
+        - session_id
+      properties:
+        session_id:
+          type: string
+
+    ChatAgentRequest:
+      type: object
+      required:
+        - session_id
+        - message
+      properties:
+        session_id:
+          type: string
+        message:
+          type: string
+
+    QualityReport:
+      type: object
+      properties:
+        health_score:
+          type: number
+          format: float
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              missing_values:
+                type: integer
+              data_type:
+                type: string

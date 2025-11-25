@@ -1,0 +1,39 @@
+# High-level application dependencies
+fastapi
+uvicorn[standard]
+pandas
+scikit-learn
+ 
+langchain<0.1,>=0.0.354
+langchain-openai
+langchain-google-genai>=1.0.1
+langchain-experimental
+langchainhub
+
+# High-level utility dependencies
+python-multipart
+openpyxl
+sqlalchemy
+tabulate
+scipy
+matplotlib
+seaborn
+prometheus-fastapi-instrumentator
+httpx
+xlsxwriter
+mlflow
+xgboost
+prophet
+shap
+python-docx
+docx2pdf
+statsmodels
+nbformat
+python-magic
+
+# Testing dependencies
+pytest
+setuptools
+jellyfish
+rapidfuzz
+pyarrow
